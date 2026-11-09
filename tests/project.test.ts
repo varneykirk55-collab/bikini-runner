@@ -1,0 +1,124 @@
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'node:test';
+import { RUNNER, SHEET_KEYS } from '../src/player/animation';
+import { OBSTACLES } from '../src/obstacles/defs';
+import { POWER_KINDS } from '../src/systems/PowerUps';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const SRC = join(ROOT, 'src');
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walk(p, out);
+    else out.push(p);
+  }
+  return out;
+}
+
+const tsFiles = walk(SRC).filter((f) => f.endsWith('.ts'));
+const read = (f: string) => readFileSync(f, 'utf8');
+
+/** Remove // and /* *\/ comments so provenance notes don't count as runtime content. */
+const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+
+function pngSize(file: string): [number, number] {
+  const b = readFileSync(file);
+  assert.equal(b.toString('ascii', 1, 4), 'PNG', `${file} is a PNG`);
+  return [b.readUInt32BE(16), b.readUInt32BE(20)];
+}
+
+test('runner sheets match the animation contract (8 frames of 303x430, one row)', () => {
+  for (const name of Object.keys(SHEET_KEYS)) {
+    const [w, h] = pngSize(join(SRC, 'assets', 'runner', `${name}.png`));
+    const frames = name === 'run' ? RUNNER.runFrames : name === 'jump' ? RUNNER.jumpFrames : RUNNER.slideFrames;
+    assert.equal(w, RUNNER.frameWidth * frames, `${name}.png width`);
+    assert.equal(h, RUNNER.frameHeight, `${name}.png height`);
+  }
+});
+
+test('every relative import resolves to a file inside this project; the only package is phaser', () => {
+  const importRe = /(?:from|import)\s*['"]([^'"]+)['"]/g;
+  for (const file of tsFiles) {
+    const text = stripComments(read(file));
+    for (const m of text.matchAll(importRe)) {
+      const spec = m[1];
+      if (!spec.startsWith('.')) {
+        assert.equal(spec, 'phaser', `${relative(ROOT, file)} imports package '${spec}'`);
+        continue;
+      }
+      const base = resolve(dirname(file), spec);
+      assert.ok(base.startsWith(ROOT + sep), `${relative(ROOT, file)} imports outside the project: ${spec}`);
+      const candidates = [base, `${base}.ts`, join(base, 'index.ts')];
+      assert.ok(candidates.some((c) => existsSync(c) && statSync(c).isFile()), `${relative(ROOT, file)}: cannot resolve '${spec}'`);
+    }
+  }
+});
+
+test('package.json is its own project with phaser as the only runtime dependency', () => {
+  const pkg = JSON.parse(read(join(ROOT, 'package.json')));
+  assert.equal(pkg.name, 'bikini-runner');
+  assert.deepEqual(Object.keys(pkg.dependencies), ['phaser']);
+  assert.ok(!JSON.stringify(pkg).toLowerCase().includes('valhalla'));
+});
+
+test('no Valhalla Run visual identity in runtime code or shipped asset names', () => {
+  const banned = /valhalla|viking|norse|nordic|rune|draugr|raven|odin|fjord|aurora|shield wall|iron fjord|lilita|cinzel/i;
+  for (const file of tsFiles) {
+    const code = stripComments(read(file));
+    const hit = code.match(banned);
+    assert.equal(hit, null, `${relative(ROOT, file)} contains '${hit?.[0]}'`);
+  }
+  for (const file of walk(join(SRC, 'assets'))) {
+    assert.ok(!banned.test(relative(SRC, file)), `asset name carries old identity: ${file}`);
+  }
+  const html = read(join(ROOT, 'index.html'));
+  assert.ok(!banned.test(html), 'index.html carries old identity');
+  assert.ok(!/fonts\.googleapis|fonts\.gstatic/.test(html), 'no external font host');
+});
+
+test('no runtime network dependencies in source (no http(s) URLs outside comments)', () => {
+  for (const file of tsFiles) {
+    const code = stripComments(read(file));
+    assert.ok(!/https?:\/\//.test(code), `${relative(ROOT, file)} references a URL`);
+  }
+});
+
+test('every texture key referenced in code has a generator or a loaded sheet', () => {
+  // keys produced by the procedural generators
+  const generated = new Set<string>();
+  for (const file of tsFiles.filter((f) => f.includes(`${sep}gfx${sep}`))) {
+    for (const m of read(file).matchAll(/makeTexture\(\s*scene,\s*'([A-Za-z0-9_]+)'/g)) generated.add(m[1]);
+  }
+  for (const key of Object.values(SHEET_KEYS)) generated.add(key);
+  assert.ok(generated.size > 20, 'found the generators');
+
+  const needed = new Set<string>(['pickup_star_a', 'pickup_star_b', 'pickup_star_c', 'palm', 'tikiTorch', 'parasail']);
+  for (const def of Object.values(OBSTACLES)) for (const f of def.frames) needed.add(f);
+  for (const k of POWER_KINDS) needed.add(`pickup_${k}`);
+
+  const literalRes = [
+    /\.image\(\s*[^,()]+,\s*[^,()]+,\s*'([A-Za-z0-9_]+)'/g,
+    /\.particles\(\s*[^,()]+,\s*[^,()]+,\s*'([A-Za-z0-9_]+)'/g,
+    /\.tileSprite\(\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*'([A-Za-z0-9_]+)'/g,
+  ];
+  for (const file of tsFiles.filter((f) => !f.includes(`${sep}gfx${sep}`))) {
+    const code = stripComments(read(file));
+    for (const re of literalRes) for (const m of code.matchAll(re)) needed.add(m[1]);
+  }
+  for (const key of needed) assert.ok(generated.has(key), `texture '${key}' is used but never generated`);
+});
+
+test('placeholder music files exist and are small enough for mobile', () => {
+  const dir = join(SRC, 'assets', 'music');
+  const files = readdirSync(dir).filter((f) => f.endsWith('.mp3'));
+  assert.ok(files.length >= 3);
+  let total = 0;
+  for (const f of files) total += statSync(join(dir, f)).size;
+  assert.ok(total < 2 * 1024 * 1024, `music is ${total} bytes`);
+  const tracks = read(join(SRC, 'audio', 'tracks.ts'));
+  for (const f of files) assert.ok(tracks.includes(f), `${f} is wired into tracks.ts`);
+});
