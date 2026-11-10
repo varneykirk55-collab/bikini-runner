@@ -118,7 +118,7 @@ export class Spawner {
 
     for (let i = 0; i < n; i++) {
       // Clamp keeps the floor after a tight pair (and across segment boundaries).
-      const at = Math.max(start + i * slot + Math.random() * (slot - minGap), this.lastAt + minGap);
+      const at = Math.max(start + i * slot + Math.random() * Math.max(0, slot - minGap), this.lastAt + minGap);
       this.planObstacle(at, d);
       if (i === pairIndex) this.planObstacle(at + SPAWN.pairGap, d);
     }
@@ -170,11 +170,12 @@ export class Spawner {
   }
 
   private spawnObstacle(item: Extract<Planned, { type: 'obstacle' }>, z: number, spawnZ: number): void {
-    this.rowsSincePower++;
     this.obstacles.push(new Obstacle(this.scene, item.kind, item.lane, spawnZ));
 
     // One set of pickups per placement (the first of a two-abreast pair), never into a blocked lane.
-    if (item.lane !== item.blocked[0] || Math.random() > 0.65) return;
+    if (item.lane !== item.blocked[0]) return;
+    this.rowsSincePower++;
+    if (Math.random() > 0.65) return;
     const free = [-1, 0, 1].filter((l) => !item.blocked.includes(l));
     if (OBSTACLES[item.kind].avoid === 'jump' && Math.random() < 0.35) this.pickupArc(item.lane, z);
     else this.pickupLine(Phaser.Utils.Array.GetRandom(free), z, Math.min(item.gapBehind, 20));

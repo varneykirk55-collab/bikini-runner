@@ -109,7 +109,21 @@ export class UiButton extends Phaser.GameObjects.Container {
 
   setEnabled(on: boolean): this {
     this.enabled = on;
+    if (!on) {
+      this.pressed = false;
+      this.bg.clearTint();
+    }
     this.setAlpha(on ? 1 : 0.5);
+    return this;
+  }
+
+  /** Enable or disable pointer interaction without changing visual opacity. */
+  setInteractiveEnabled(on: boolean): this {
+    this.enabled = on;
+    if (!on) {
+      this.pressed = false;
+      this.bg.clearTint();
+    }
     return this;
   }
 }
@@ -150,6 +164,7 @@ export class Modal {
   readonly root: Phaser.GameObjects.Container;
   private readonly dim: Phaser.GameObjects.Rectangle;
   private closing = false;
+  private readonly keyClose?: () => void;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -160,10 +175,26 @@ export class Modal {
       .setDepth(opts.depth)
       .setInteractive();
     const panel = scene.add.image(0, 0, panelTexture(scene, opts.width, opts.height));
+    panel.setInteractive(); // swallow pointer clicks inside the panel so they don't hit dim backdrop
     const top = -opts.height / 2;
     const title = sunFill(uiText(scene, 0, top + 56, opts.title, 40, { stroke: '#7a2a10' }).setOrigin(0.5));
     const divider = scene.add.image(0, top + 96, dividerTexture(scene, opts.width - 90));
     this.root = scene.add.container(GAME_W / 2, GAME_H / 2, [panel, title, divider]).setDepth(opts.depth + 1);
+
+    if (opts.onClose) {
+      this.dim.on('pointerdown', () => {
+        sfx(scene).uiTap();
+        this.close();
+      });
+      this.keyClose = () => {
+        sfx(scene).uiTap();
+        this.close();
+      };
+      scene.input.keyboard?.on('keydown-ESC', this.keyClose);
+      scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        if (this.keyClose) scene.input.keyboard?.off('keydown-ESC', this.keyClose);
+      });
+    }
 
     this.dim.setAlpha(0);
     this.root.setScale(0.9).setAlpha(0);
@@ -179,6 +210,11 @@ export class Modal {
   close(): void {
     if (this.closing) return;
     this.closing = true;
+    this.dim.disableInteractive();
+    if (this.keyClose) this.scene.input.keyboard?.off('keydown-ESC', this.keyClose);
+    for (const child of this.root.list) {
+      if (child instanceof UiButton) child.setInteractiveEnabled(false);
+    }
     this.scene.tweens.add({ targets: this.dim, alpha: 0, duration: 160 });
     this.scene.tweens.add({
       targets: this.root,

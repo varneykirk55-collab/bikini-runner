@@ -36,6 +36,8 @@ const PICKUP_STEPS = [0, 200, 400, 700, 900, 1200, 1400, 1600];
  * through `scene.sound` like any loaded audio. Without Web Audio it is silent.
  */
 class Sfx {
+  private initialized = false;
+  private _muted = false;
   private pickupStep = 0;
   private lastPickup = 0;
   private lastLane = 0;
@@ -45,15 +47,20 @@ class Sfx {
   /** Render every clip into the audio cache. Safe to call more than once. */
   init(): void {
     const sound = this.game.sound;
-    if (!(sound instanceof Phaser.Sound.WebAudioSoundManager)) return;
-    for (const [key, recipe] of Object.entries(RECIPES)) {
-      if (!this.game.cache.audio.exists(key)) this.game.cache.audio.add(key, renderBuffer(sound.context, recipe));
+    if (sound instanceof Phaser.Sound.WebAudioSoundManager) {
+      for (const [key, recipe] of Object.entries(RECIPES)) {
+        if (!this.game.cache.audio.exists(key)) this.game.cache.audio.add(key, renderBuffer(sound.context, recipe));
+      }
     }
+    if (this.initialized) return;
+    this.initialized = true;
+    let startMuted = false;
     try {
-      sound.mute = window.localStorage.getItem(MUTE_KEY) === '1';
+      startMuted = window.localStorage.getItem(MUTE_KEY) === '1';
     } catch {
       // storage unavailable: start unmuted
     }
+    this.setMuted(startMuted);
     // M toggles SFX mute on desktop.
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyM' && !e.repeat) this.toggleMute();
@@ -61,18 +68,29 @@ class Sfx {
   }
 
   get muted(): boolean {
-    return this.game.sound.mute;
+    return this._muted;
+  }
+
+  private setMuted(muted: boolean): void {
+    this._muted = muted;
+    const sound = this.game.sound;
+    // WebAudioSoundManager.mute only calls masterMuteNode.gain.setValueAtTime(), which
+    // does not update gain.value synchronously (or while the AudioContext is suspended).
+    if (sound instanceof Phaser.Sound.WebAudioSoundManager) {
+      sound.masterMuteNode.gain.value = muted ? 0 : 1;
+    }
+    sound.mute = muted;
   }
 
   toggleMute(): boolean {
-    const sound = this.game.sound;
-    sound.mute = !sound.mute;
+    const next = !this._muted;
+    this.setMuted(next);
     try {
-      window.localStorage.setItem(MUTE_KEY, sound.mute ? '1' : '0');
+      window.localStorage.setItem(MUTE_KEY, next ? '1' : '0');
     } catch {
       // ignore
     }
-    return sound.mute;
+    return next;
   }
 
   private play(key: string, config: Phaser.Types.Sound.SoundConfig = {}): void {

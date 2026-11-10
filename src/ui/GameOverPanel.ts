@@ -59,12 +59,19 @@ export function showGameOver(scene: Phaser.Scene, result: RunResult, actions: Ga
 
   let ready = false;
   let done = false;
-  const finish = (fn: () => void) => {
-    if (!ready || done) return;
-    done = true;
+  let againBtn!: UiButton;
+  let menuBtn!: UiButton;
+  const cleanupKeys = () => {
     scene.input.keyboard?.off('keydown-SPACE', again);
     scene.input.keyboard?.off('keydown-ENTER', again);
     scene.input.keyboard?.off('keydown-ESC', menu);
+  };
+  const finish = (fn: () => void) => {
+    if (!ready || done) return;
+    done = true;
+    againBtn.setInteractiveEnabled(false);
+    menuBtn.setInteractiveEnabled(false);
+    cleanupKeys();
     fn();
   };
   const again = () =>
@@ -78,7 +85,7 @@ export function showGameOver(scene: Phaser.Scene, result: RunResult, actions: Ga
       actions.onMenu();
     });
 
-  const againBtn = new UiButton(scene, 0, top + 480, {
+  againBtn = new UiButton(scene, 0, top + 480, {
     variant: 'primary',
     width: 360,
     height: 92,
@@ -86,8 +93,8 @@ export function showGameOver(scene: Phaser.Scene, result: RunResult, actions: Ga
     sound: 'none', // again() plays the confirm
     pulse: true,
     onClick: again,
-  });
-  const menuBtn = new UiButton(scene, 0, top + 586, {
+  }).setInteractiveEnabled(false);
+  menuBtn = new UiButton(scene, 0, top + 586, {
     variant: 'secondary',
     width: 290,
     height: 70,
@@ -95,11 +102,15 @@ export function showGameOver(scene: Phaser.Scene, result: RunResult, actions: Ga
     icon: 'home',
     sound: 'none', // menu() plays the tap
     onClick: menu,
-  });
+  }).setInteractiveEnabled(false);
   modal.add(againBtn, menuBtn);
 
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupKeys);
   scene.time.delayedCall(550, () => {
+    if (done) return;
     ready = true;
+    againBtn.setInteractiveEnabled(true);
+    menuBtn.setInteractiveEnabled(true);
     scene.input.keyboard?.on('keydown-SPACE', again);
     scene.input.keyboard?.on('keydown-ENTER', again);
     scene.input.keyboard?.on('keydown-ESC', menu);

@@ -17,7 +17,7 @@ npm run dev        # open the printed Network URL on your phone (same Wi-Fi)
 npm run build      # type-check + production build to dist/
 npm run preview    # serve the production build
 npm test           # unit + integrity tests (no browser needed)
-npm run smoke      # headless-browser smoke test (needs `npm run preview` running; see scripts/smoke.mjs)
+npm run smoke      # headless-browser smoke test (starts preview automatically; see scripts/smoke.mjs)
 ```
 
 Requires Node 20+. `npm test` additionally uses `tsx` (a dev dependency).

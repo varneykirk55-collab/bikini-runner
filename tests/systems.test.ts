@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SPEED } from '../src/config';
+import { POWER_DURATION, SPEED } from '../src/config';
 import { KEYMAP, SwipeRecognizer, Command } from '../src/input/commands';
 import { OBSTACLES } from '../src/obstacles/defs';
 import { difficultyAt, pickObstacle, speedAt } from '../src/systems/Difficulty';
+import { POWER_KINDS, PowerUps } from '../src/systems/PowerUps';
 import { StraightPath } from '../src/track/TrackPath';
 
 test('difficulty ramps monotonically from 0 to 1 over rampDistance; speed spans start..max', () => {
@@ -91,4 +92,26 @@ test('StraightPath: always heading 0, position along z, never a turn (reserved s
   assert.deepEqual(p.sample(123), { distance: 123, heading: 0, x: 0, z: 123 });
   assert.equal(p.headingAt(5000), 0);
   assert.equal(p.turnAhead(0, 1e6), null);
+});
+
+test('PowerUps: activates for configured duration, ticks down, reports fraction and clears', () => {
+  const p = new PowerUps();
+  for (const kind of POWER_KINDS) {
+    assert.equal(p.active(kind), false);
+    assert.equal(p.remaining(kind), 0);
+    assert.equal(p.fraction(kind), 0);
+    p.activate(kind);
+    assert.equal(p.active(kind), true);
+    assert.equal(p.remaining(kind), POWER_DURATION[kind]);
+    assert.equal(p.fraction(kind), 1);
+  }
+  p.update(POWER_DURATION.flight / 2);
+  assert.ok(Math.abs(p.fraction('flight') - 0.5) < 1e-6);
+  p.clear('shield');
+  assert.equal(p.active('shield'), false);
+  p.update(100);
+  for (const kind of POWER_KINDS) {
+    assert.equal(p.active(kind), false);
+    assert.equal(p.remaining(kind), 0);
+  }
 });

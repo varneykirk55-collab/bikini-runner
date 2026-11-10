@@ -31,6 +31,9 @@ export class PauseScene extends Phaser.Scene {
       pulse: true,
       onClick: () => this.resume(),
     });
+    const syncSound = () => {
+      sound.setLabel(this.soundLabel()).setIcon(sfx(this).muted ? 'soundOff' : 'soundOn');
+    };
     const sound = new UiButton(this, 0, top + 292, {
       variant: 'secondary',
       width: 290,
@@ -39,7 +42,7 @@ export class PauseScene extends Phaser.Scene {
       icon: sfx(this).muted ? 'soundOff' : 'soundOn',
       onClick: () => {
         sfx(this).toggleMute();
-        sound.setLabel(this.soundLabel()).setIcon(sfx(this).muted ? 'soundOff' : 'soundOn');
+        syncSound();
       },
     });
     const menu = new UiButton(this, 0, top + 384, {
@@ -56,9 +59,11 @@ export class PauseScene extends Phaser.Scene {
       sfx(this).uiConfirm(); // SFX: UI confirm (resume via keyboard)
       this.resume();
     };
+    this.game.sound.on(Phaser.Sound.Events.GLOBAL_MUTE, syncSound);
     this.input.keyboard?.on('keydown-ESC', keyResume);
     this.input.keyboard?.on('keydown-P', keyResume);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.sound.off(Phaser.Sound.Events.GLOBAL_MUTE, syncSound);
       this.input.keyboard?.off('keydown-ESC', keyResume);
       this.input.keyboard?.off('keydown-P', keyResume);
     });

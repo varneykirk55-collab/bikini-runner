@@ -30,7 +30,7 @@ const DARK_FACE: Array<[number, string]> = [[0, 'rgba(10,84,118,0.94)'], [1, 'rg
 const INK = '#06324a';
 
 /** Rounded face with a drop shadow, a glossy top half and a white rim. */
-function pill(c: Ctx, x: number, y: number, w: number, h: number, r: number, face: Array<[number, string]>, rim = 3): void {
+function pill(c: Ctx, x: number, y: number, w: number, h: number, r: number, face: Array<[number, string]>, rim = 3, gloss = true): void {
   c.save();
   c.shadowColor = 'rgba(0,30,50,0.45)';
   c.shadowBlur = 8;
@@ -40,9 +40,11 @@ function pill(c: Ctx, x: number, y: number, w: number, h: number, r: number, fac
   c.fill();
   c.restore();
   // gloss
-  roundRectPath(c, x + 3, y + 3, w - 6, h * 0.46, Math.max(2, r - 3));
-  c.fillStyle = 'rgba(255,255,255,0.22)';
-  c.fill();
+  if (gloss) {
+    roundRectPath(c, x + 3, y + 3, w - 6, h * 0.46, Math.max(2, r - 3));
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    c.fill();
+  }
   // rim
   roundRectPath(c, x, y, w, h, r);
   c.strokeStyle = 'rgba(255,255,255,0.92)';
@@ -85,13 +87,22 @@ export function iconButtonTexture(scene: Phaser.Scene, key: string, size: number
 export function panelTexture(scene: Phaser.Scene, w: number, h: number): string {
   const pad = 12;
   return makeUi(scene, `ui_panel_${w}x${h}`, w + pad * 2, h + pad * 2, (c) => {
-    pill(c, pad, pad, w, h, 30, DARK_FACE, 4);
+    pill(c, pad, pad, w, h, 30, DARK_FACE, 4, false);
     c.save();
     roundRectPath(c, pad, pad, w, h, 30);
     c.clip();
+    c.fillStyle = grad(c, pad, pad + 96, [
+      [0, 'rgba(255,255,255,0.16)'],
+      [1, 'rgba(255,255,255,0)'],
+    ]);
+    c.fillRect(pad, pad, w, 96);
     c.fillStyle = grad(c, pad, pad + 10, [[0, '#ff8a5c'], [1, '#ff4f7b']]);
     c.fillRect(pad, pad, w, 10);
     c.restore();
+    roundRectPath(c, pad, pad, w, h, 30);
+    c.strokeStyle = 'rgba(255,255,255,0.92)';
+    c.lineWidth = 4;
+    c.stroke();
   });
 }
 
@@ -248,11 +259,20 @@ const ICONS = {
     c.fill();
   },
   book: (c: Ctx, s: number) => {
+    // Open book with arched pages and spine crease
     c.beginPath();
-    c.rect(s * 0.18, s * 0.22, s * 0.32, s * 0.56);
+    c.moveTo(s * 0.5, s * 0.26);
+    c.quadraticCurveTo(s * 0.32, s * 0.18, s * 0.14, s * 0.24);
+    c.lineTo(s * 0.14, s * 0.76);
+    c.quadraticCurveTo(s * 0.32, s * 0.7, s * 0.5, s * 0.78);
+    c.closePath();
     outlineFill(c, '#ffffff');
     c.beginPath();
-    c.rect(s * 0.5, s * 0.22, s * 0.32, s * 0.56);
+    c.moveTo(s * 0.5, s * 0.26);
+    c.quadraticCurveTo(s * 0.68, s * 0.18, s * 0.86, s * 0.24);
+    c.lineTo(s * 0.86, s * 0.76);
+    c.quadraticCurveTo(s * 0.68, s * 0.7, s * 0.5, s * 0.78);
+    c.closePath();
     outlineFill(c, '#ffe9b0');
   },
   home: (c: Ctx, s: number) => {

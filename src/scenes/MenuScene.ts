@@ -63,15 +63,17 @@ export class MenuScene extends Phaser.Scene {
 
     // Music (merged from the music branch): pointerdown is a user gesture, so the
     // title theme can start; the RUN tap then switches to the run playlist.
-    this.input.on('pointerdown', () => {
+    const onPointerDown = () => {
       if (!this.starting) Music.of(this).playMenu();
-    });
+    };
+    this.input.on('pointerdown', onPointerDown);
 
     // Keyboard: Space / Enter start the run (ignored while a panel is open).
     const keyStart = () => !this.modal && this.begin();
     this.input.keyboard?.on('keydown-SPACE', keyStart);
     this.input.keyboard?.on('keydown-ENTER', keyStart);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off('pointerdown', onPointerDown);
       this.input.keyboard?.off('keydown-SPACE', keyStart);
       this.input.keyboard?.off('keydown-ENTER', keyStart);
     });
@@ -139,9 +141,17 @@ export class MenuScene extends Phaser.Scene {
     if (this.modal) return;
     const H = 400;
     const top = -H / 2;
-    const modal = new Modal(this, { title: 'SETTINGS', width: 420, height: H, depth: DEPTH.overlay, onClose: () => (this.modal = undefined) });
     const soundLabel = () => (sfx(this).muted ? 'SOUND: OFF' : 'SOUND: ON');
-    const sound = new UiButton(this, 0, top + 180, {
+    let sound!: UiButton;
+    const syncSound = () => {
+      sound.setLabel(soundLabel()).setIcon(sfx(this).muted ? 'soundOff' : 'soundOn');
+    };
+    const cleanup = () => {
+      this.game.sound.off(Phaser.Sound.Events.GLOBAL_MUTE, syncSound);
+      this.modal = undefined;
+    };
+    const modal = new Modal(this, { title: 'SETTINGS', width: 420, height: H, depth: DEPTH.overlay, onClose: cleanup });
+    sound = new UiButton(this, 0, top + 180, {
       variant: 'secondary',
       width: 300,
       height: 70,
@@ -149,8 +159,12 @@ export class MenuScene extends Phaser.Scene {
       icon: sfx(this).muted ? 'soundOff' : 'soundOn',
       onClick: () => {
         sfx(this).toggleMute();
-        sound.setLabel(soundLabel()).setIcon(sfx(this).muted ? 'soundOff' : 'soundOn');
+        syncSound();
       },
+    });
+    this.game.sound.on(Phaser.Sound.Events.GLOBAL_MUTE, syncSound);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.sound.off(Phaser.Sound.Events.GLOBAL_MUTE, syncSound);
     });
     const hint = uiText(this, 0, top + 250, 'Desktop: press M to mute', 18, { color: UI.muted }).setOrigin(0.5);
     const done = new UiButton(this, 0, top + 326, {
@@ -167,7 +181,7 @@ export class MenuScene extends Phaser.Scene {
 
   private openHowTo(): void {
     if (this.modal) return;
-    const H = 720;
+    const H = 748;
     const top = -H / 2;
     const modal = new Modal(this, { title: 'HOW TO PLAY', width: 470, height: H, depth: DEPTH.overlay, onClose: () => (this.modal = undefined) });
     const left = -190;
@@ -176,30 +190,30 @@ export class MenuScene extends Phaser.Scene {
       uiText(this, left, top + y, str, size, { color, align: 'left', strokeThickness: 3 }).setOrigin(0, 0.5);
 
     const items: Phaser.GameObjects.GameObject[] = [
-      label(136, 'CONTROLS'),
-      line(168, 'Swipe left / right: change lane'),
-      line(196, 'Swipe up: jump   ·   Swipe down: slide'),
-      line(224, 'Keys: arrows / WASD / space   ·   Esc: pause', UI.muted, 16),
-      label(268, 'DANGERS'),
-      line(300, 'Jump over driftwood and rocks'),
-      line(328, 'Slide under tiki gates and birds'),
-      line(356, 'Change lane to dodge coconut crabs'),
-      label(400, 'PICKUPS'),
+      label(132, 'CONTROLS'),
+      line(164, 'Swipe left / right: change lane'),
+      line(192, 'Swipe up: jump   ·   Swipe down: slide'),
+      line(220, 'Keys: arrows / WASD / space   ·   Esc: pause', UI.muted, 16),
+      label(262, 'DANGERS'),
+      line(294, 'Jump over driftwood and rocks'),
+      line(322, 'Slide under tiki gates and birds'),
+      line(350, 'Change lane to dodge coconut crabs'),
+      label(392, 'PICKUPS'),
     ];
     const pickups: Array<[string, string, string]> = [
       ['pickup_star_a', 'Blossom: +10 score', PICKUP_COLORS.basic],
       ['pickup_shield', `${POWER_LABELS.shield}: blocks one hit`, PICKUP_COLORS.shield],
       ['pickup_magnet', `${POWER_LABELS.magnet}: pulls stars in`, PICKUP_COLORS.magnet],
-      ['pickup_double', POWER_LABELS.double, PICKUP_COLORS.double],
+      ['pickup_double', `${POWER_LABELS.double}: doubles star value`, PICKUP_COLORS.double],
       ['pickup_flight', `${POWER_LABELS.flight}: soar over everything`, PICKUP_COLORS.flight],
     ];
     pickups.forEach(([key, text, color], i) => {
-      const y = 440 + i * 42;
+      const y = 430 + i * 40;
       items.push(this.add.image(left + 20, top + y, key).setScale(0.45));
       items.push(line(y, text, color, 19).setX(left + 50));
     });
     items.push(
-      new UiButton(this, 0, top + 660, {
+      new UiButton(this, 0, top + 678, {
         variant: 'primary',
         width: 240,
         height: 76,

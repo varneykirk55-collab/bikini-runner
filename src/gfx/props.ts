@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Ctx, TAU, circle, makeTexture, poly, polyline, rgba, vGradient } from './canvas';
+import { Ctx, TAU, circle, makeTexture, poly, polyline, rgba } from './canvas';
 
 /**
  * Painted tropical props, drawn procedurally at boot. Texture keys are unchanged
@@ -391,11 +391,11 @@ function doubleBadge(c: Ctx): void {
   c.beginPath();
   c.arc(36, 36, 22, 0, TAU);
   c.stroke();
-  polyline(c, [[24, 28], [38, 44]], '#ffffff', 5);
-  polyline(c, [[38, 28], [24, 44]], '#ffffff', 5);
   c.fillStyle = '#ffffff';
-  c.font = 'bold 16px sans-serif';
-  c.fillText('2', 42, 46);
+  c.font = '900 22px sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('×2', 36, 37);
 }
 
 function parasailPickup(c: Ctx): void {
