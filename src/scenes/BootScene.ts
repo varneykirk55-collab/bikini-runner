@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Music } from '../audio/Music';
 import { sfx } from '../audio/Sfx';
+import backdropImage from '../assets/backdrop/backdrop.jpg';
 import idleSheet from '../assets/runner/idle.png';
 import jumpSheet from '../assets/runner/jump.png';
 import runSheet from '../assets/runner/run.png';
@@ -12,10 +13,11 @@ import { IDLE_KEY, RUNNER, SHEET_KEYS } from '../player/animation';
 import { UI_FONT } from '../ui/theme';
 
 /**
- * Loads the runner sprite sheets and the standing idle frame, then draws scenery,
- * obstacles, pickups and UI textures procedurally. Generators skip keys that
- * already exist, so a real image loaded under the same key in preload() wins.
- * The rigged model beside the sheets is a source asset and is not loaded here.
+ * Loads the painted backdrop, the runner sprite sheets, and the standing idle
+ * frame, then draws obstacles, pickups and UI textures procedurally. Generators
+ * skip keys that already exist, so a real image loaded under the same key in
+ * preload() wins. The rigged model beside the sheets is a source asset and is
+ * not loaded here.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -38,6 +40,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     const frameConfig = { frameWidth: RUNNER.frameWidth, frameHeight: RUNNER.frameHeight };
+    this.load.image('backdrop', backdropImage);
     this.load.spritesheet(SHEET_KEYS.run, runSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.jump, jumpSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.slide, slideSheet, frameConfig);
