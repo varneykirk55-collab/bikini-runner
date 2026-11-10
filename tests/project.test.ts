@@ -3,8 +3,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { GAME_W, HORIZON_Y } from '../src/config';
-import { RUNNER, SHEET_KEYS } from '../src/player/animation';
+import { GAME_W, HORIZON_Y, PLAYER } from '../src/config';
+import { IDLE_KEY, RUNNER, SHEET_KEYS } from '../src/player/animation';
 import { OBSTACLES } from '../src/obstacles/defs';
 import { POWER_KINDS } from '../src/systems/PowerUps';
 
@@ -38,6 +38,31 @@ test('runner sheets match the animation contract (8 frames of 303x430, one row)'
     const frames = name === 'run' ? RUNNER.runFrames : name === 'jump' ? RUNNER.jumpFrames : RUNNER.slideFrames;
     assert.equal(w, RUNNER.frameWidth * frames, `${name}.png width`);
     assert.equal(h, RUNNER.frameHeight, `${name}.png height`);
+  }
+  const [idleW, idleH] = pngSize(join(SRC, 'assets', 'runner', 'idle.png'));
+  assert.equal(idleW, RUNNER.frameWidth, 'idle.png width');
+  assert.equal(idleH, RUNNER.frameHeight, 'idle.png height');
+});
+
+test('display scale keeps the baked silhouette on the height the hitboxes were tuned for', () => {
+  // Mean of sheets-meta.json run.standingAlphaHeightPx. Target hair-to-ground is 1.119 units.
+  const meanRunPx = (309.8 + 300.8 + 304.8 + 310.8 + 308.8 + 299.8 + 302.8 + 306.8) / 8;
+  const units = (meanRunPx * RUNNER.scale) / 144;
+  assert.ok(Math.abs(units - 1.119) < 0.01, `run silhouette is ${units.toFixed(3)} units`);
+  assert.equal(RUNNER.scale, RUNNER.slideScale);
+  // Lowest slide body (slide frame 3 alpha, 420-305 px) stays under the limbo bar at 0.55.
+  const lowestSlideUnits = (115 * RUNNER.slideScale) / 144;
+  assert.ok(lowestSlideUnits < 0.55, `slide body ${lowestSlideUnits.toFixed(3)} should clear the limbo`);
+  assert.ok(Math.abs(lowestSlideUnits - PLAYER.slideHeight) < 0.08, 'slide hitbox still matches the low pose');
+  assert.ok(PLAYER.standHeight < units && PLAYER.standHeight > lowestSlideUnits);
+});
+
+test('the rigged model is committed as a source asset and is not loaded at runtime', () => {
+  const glb = join(SRC, 'assets', 'runner', 'bikini_runner_web.glb');
+  assert.ok(existsSync(glb) && statSync(glb).size > 1_000_000, 'bikini_runner_web.glb');
+  for (const file of tsFiles) {
+    const code = stripComments(read(file));
+    assert.ok(!code.includes('.glb'), `${relative(ROOT, file)} must not load the rig`);
   }
 });
 
@@ -95,7 +120,8 @@ test('every texture key referenced in code has a generator or a loaded sheet', (
     for (const m of read(file).matchAll(/makeTexture\(\s*scene,\s*'([A-Za-z0-9_]+)'/g)) generated.add(m[1]);
   }
   for (const key of Object.values(SHEET_KEYS)) generated.add(key);
-  // images loaded straight from files in BootScene
+  generated.add(IDLE_KEY);
+  // images loaded straight from files in BootScene (the painted backdrop)
   for (const m of read(join(ROOT, 'src', 'scenes', 'BootScene.ts')).matchAll(/load\.image\(\s*'([A-Za-z0-9_]+)'/g)) generated.add(m[1]);
   assert.ok(generated.size > 20, 'found the generators');
 

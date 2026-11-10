@@ -1,26 +1,21 @@
 /**
  * Animation contract for the runner sprite sheets.
  *
- * Carried over from Valhalla Run unchanged except where noted. The *timing and
- * layout* is the contract; the pictures inside the sheets are replaceable.
+ * The timing and layout is the contract. The pictures are the baked bikini runner
+ * (rear ortho, feet on the origin in every frame). `src/assets/runner/bikini_runner_web.glb`
+ * is the rigged source model, kept for re-bakes. The game is 2D and does not load it.
  *
  * Sheets (each one row of 8 frames, 303 x 430 px per frame, rear view):
  * - run:   8 frames across `runCycle` seconds, looped; playback rate scales with speed.
  * - jump:  8 frames, driven by airtime (not by the clip's own timing). Poses are
  *          planted on the ground; the physics hop supplies the height.
- * - slide: 8 frames, played once across PLAYER.slideTime.
+ * - slide: 8 frames, played once across PLAYER.slideTime, floor contact kept.
+ * - idle:  one 303 x 430 standing frame (`IDLE_KEY`), for title, a grounded pause, and the wipeout.
  *
- * To drop in a new character: bake it to three sheets with this exact layout
- * (frame size, 8 frames, feet anchored at originX/originY) and replace the PNGs in
- * src/assets/runner/. No code change is needed unless the new sheets' frame
- * size or frame counts differ, in which case edit only this file.
- *
- * CHANGED FROM VALHALLA RUN: the shipped sheets are neutral PLACEHOLDER mannequins
- * (tools/make_placeholder_sheets.py), drawn at one uniform scale. Valhalla's slide
- * sheet was baked with a wider camera, so it needed slideScale = scale * (389/274).
- * The placeholders need no such correction, so slideScale equals scale. If real
- * slide art is baked with a wider camera again, re-measure the standing alpha
- * heights of run vs slide and restore the ratio (see docs/ANIMATION_CONTRACT.md).
+ * One camera and one scale cover every sheet, including slide, so there is no
+ * separate slide-size correction. 0.5267 (the precise value below) maps the ~306 px
+ * run silhouette to the same ~1.119 unit on-screen height as the previous runner.
+ * `PLAYER.standHeight` / `slideHeight` stay in world units and still line up with that body.
  */
 export const RUNNER = {
   frameWidth: 303,
@@ -28,9 +23,9 @@ export const RUNNER = {
   originX: 0.5115511551155115,
   originY: 0.9484765369303741,
   /** Maps texture pixels to game pixels (hair-to-ground ≈ 1.119 m at UNIT_PX). */
-  scale: 0.42421523991637733,
-  /** Same as `scale` for the placeholder sheets (see note above). */
-  slideScale: 0.42421523991637733,
+  scale: 0.5267460109861366,
+  /** Same camera as run/jump/idle, so the same scale. */
+  slideScale: 0.5267460109861366,
   runFrames: 8,
   jumpFrames: 8,
   slideFrames: 8,
@@ -47,6 +42,9 @@ export const SHEET_KEYS = {
 } as const;
 
 export type PoseKey = keyof typeof SHEET_KEYS;
+
+/** Single standing frame. Not a pose() result: the action clips still win while running. */
+export const IDLE_KEY = 'runner_idle';
 
 export interface Pose {
   key: PoseKey;

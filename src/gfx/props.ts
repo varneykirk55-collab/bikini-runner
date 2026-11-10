@@ -1,14 +1,13 @@
 import Phaser from 'phaser';
-import { Ctx, Pt, TAU, box, circle, makeTexture, poly, polyline, rgba, vGradient } from './canvas';
+import { Ctx, TAU, circle, makeTexture, poly, polyline, rgba, vGradient } from './canvas';
 
 /**
- * PLACEHOLDER props: beach obstacles, collectibles, decor and particle textures,
- * drawn procedurally at boot. Simple flat shapes on purpose: they mark where the
- * real Bikini Runner models/sprites go. Replace any one by loading an image with
- * the same key in BootScene.preload().
+ * Painted tropical props, drawn procedurally at boot. Texture keys are unchanged
+ * so gameplay and the loader stay put; a real image under the same key still wins.
  *
- * Obstacles: sandcastle, urchin, limboPole, seagull0/1, crab/crab1
- * Decor:     palm, tikiTorch
+ * Obstacles: sandcastle (driftwood), urchin (rocks), limboPole (tiki gate),
+ *            seagull0/1 (tropical bird), crab/crab1 (coconut crab)
+ * Decor:     palm, monstera, fern, hibiscus, tikiTorch
  * Pickups:   pickup_star_a/b/c, pickup_shield, pickup_magnet, pickup_double, pickup_flight, parasail
  * FX:        shadow, spark, petal, confetti, aura
  */
@@ -25,73 +24,123 @@ const OUTLINE = 'rgba(30,50,70,0.55)';
 
 // ---- Obstacles -------------------------------------------------------------------
 
+/** Low driftwood log. Jump obstacle; sits on the bottom of a 110×80 sheet. */
 function sandcastle(c: Ctx): void {
-  const sand = '#f0c06a';
-  const shade = '#d9a24c';
-  box(c, 10, 38, 90, 42, 4, sand);
-  box(c, 10, 62, 90, 18, 4, shade);
-  for (const [x, w, top] of [[14, 24, 20], [43, 24, 12], [72, 24, 20]] as const) {
-    box(c, x, top, w, 70 - top, 3, sand);
-    for (let k = 0; k < 3; k++) c.fillRect(x + 2 + k * 8, top - 5, 5, 6);
-  }
-  poly(c, [[55, 6], [55, 0], [68, 3]], '#ff5c8a');
-  c.fillStyle = shade;
-  c.fillRect(54, 0, 2, 12);
-  box(c, 48, 52, 14, 28, 6, '#8a5a24');
-}
-
-function urchin(c: Ctx): void {
-  const cx = 55;
-  const cy = 52;
-  c.strokeStyle = '#3a2168';
-  c.lineWidth = 3;
+  c.fillStyle = '#3a2918';
+  c.beginPath();
+  c.ellipse(55, 62, 48, 14, 0, 0, TAU);
+  c.fill();
+  const wood = c.createLinearGradient(10, 40, 100, 72);
+  wood.addColorStop(0, '#6b4a2a');
+  wood.addColorStop(0.45, '#a56b3c');
+  wood.addColorStop(1, '#4a3018');
+  c.fillStyle = wood;
+  c.beginPath();
+  c.ellipse(54, 50, 46, 16, -0.08, 0, TAU);
+  c.fill();
+  c.strokeStyle = 'rgba(255,220,170,0.35)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.ellipse(54, 46, 36, 7, -0.08, Math.PI, 0);
+  c.stroke();
+  // A broken branch and a patch of moss.
+  c.strokeStyle = '#5c3c22';
+  c.lineWidth = 4;
   c.lineCap = 'round';
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * TAU;
-    c.beginPath();
-    c.moveTo(cx + Math.cos(a) * 20, cy + Math.sin(a) * 20);
-    c.lineTo(cx + Math.cos(a) * 44, cy + Math.sin(a) * 38);
-    c.stroke();
-  }
-  circle(c, cx, cy, 24, '#6b3fb5');
-  circle(c, cx - 7, cy - 8, 8, 'rgba(255,255,255,0.25)');
+  c.beginPath();
+  c.moveTo(28, 48);
+  c.lineTo(16, 34);
+  c.stroke();
+  c.fillStyle = '#2f7a3c';
+  c.beginPath();
+  c.ellipse(70, 46, 10, 5, 0.4, 0, TAU);
+  c.fill();
 }
 
+/** A pile of dark rocks with a coconut. Jump obstacle, same footprint as the urchin. */
+function urchin(c: Ctx): void {
+  const rock = (x: number, y: number, rx: number, ry: number, light: string, dark: string) => {
+    c.fillStyle = dark;
+    c.beginPath();
+    c.ellipse(x, y + 3, rx, ry, 0, 0, TAU);
+    c.fill();
+    c.fillStyle = light;
+    c.beginPath();
+    c.ellipse(x, y, rx, ry, 0, 0, TAU);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.18)';
+    c.beginPath();
+    c.ellipse(x - rx * 0.25, y - ry * 0.3, rx * 0.35, ry * 0.25, 0, 0, TAU);
+    c.fill();
+  };
+  rock(32, 58, 20, 14, '#6e6a64', '#3e3c38');
+  rock(78, 60, 18, 13, '#7a756c', '#45423c');
+  rock(55, 50, 24, 16, '#8a847a', '#4a4742');
+  c.fillStyle = '#2f6b38';
+  c.beginPath();
+  c.ellipse(40, 48, 8, 4, 0.5, 0, TAU);
+  c.fill();
+  // Coconut sitting in the pile.
+  c.fillStyle = '#5c3a1e';
+  c.beginPath();
+  c.ellipse(62, 42, 11, 10, 0, 0, TAU);
+  c.fill();
+  c.fillStyle = '#8a5a32';
+  c.beginPath();
+  c.ellipse(60, 40, 8, 7, 0, 0, TAU);
+  c.fill();
+}
+
+/** Bamboo posts and a hibiscus garland. The garland is the part you slide under. */
 function limboPole(c: Ctx): void {
-  // Two posts with a hanging banner between them. The banner is the part you slide under.
-  box(c, 6, 4, 12, 136, 3, '#8a5a24');
-  box(c, 112, 4, 12, 136, 3, '#8a5a24');
-  c.fillStyle = '#ff5c8a';
-  c.fillRect(18, 8, 94, 66); // banner covers elevations ≈0.55–1.1 units
-  for (let x = 18; x < 112; x += 24) {
-    c.fillStyle = '#ffffff';
-    c.fillRect(x, 8, 12, 66);
+  const post = (x: number) => {
+    c.fillStyle = '#c4a15a';
+    c.fillRect(x, 6, 11, 130);
+    c.fillStyle = '#8a6a32';
+    c.fillRect(x + 7, 6, 4, 130);
+    for (let y = 16; y < 130; y += 18) {
+      c.fillStyle = '#6b4e24';
+      c.fillRect(x - 1, y, 13, 3);
+    }
+  };
+  post(8);
+  post(111);
+  // Carved beam and flowers across the top of the opening.
+  c.fillStyle = '#a67c3d';
+  c.fillRect(16, 10, 98, 14);
+  c.fillStyle = '#1f7a3a';
+  c.beginPath();
+  c.moveTo(16, 28);
+  c.quadraticCurveTo(65, 78, 114, 28);
+  c.lineTo(114, 40);
+  c.quadraticCurveTo(65, 92, 16, 40);
+  c.fill();
+  for (const x of [30, 50, 65, 80, 98]) {
+    flower(c, x, 36 + (x % 2) * 8, 8);
   }
-  c.strokeStyle = OUTLINE;
-  c.lineWidth = 2;
-  c.strokeRect(18, 8, 94, 66);
 }
 
 function seagull(c: Ctx, up: boolean): void {
-  const wingY = up ? 8 : 40;
-  poly(c, [[60, 38], [8, wingY], [44, 44]], '#ffffff', OUTLINE, 2);
-  poly(c, [[60, 38], [112, wingY], [76, 44]], '#ffffff', OUTLINE, 2);
-  c.fillStyle = '#ffffff';
+  const wingY = up ? 10 : 36;
+  // Macaw: sunset wings, green body. Two frames flap.
+  poly(c, [[60, 40], [6, wingY], [40, 46]], '#ff5a2a', '#7a2a10', 1.5);
+  poly(c, [[60, 40], [114, wingY], [80, 46]], '#ffd23f', '#7a2a10', 1.5);
+  c.fillStyle = '#1f8a4a';
   c.beginPath();
-  c.ellipse(60, 44, 20, 12, 0, 0, TAU);
+  c.ellipse(60, 46, 18, 11, 0, 0, TAU);
   c.fill();
-  c.strokeStyle = OUTLINE;
-  c.lineWidth = 2;
-  c.stroke();
-  circle(c, 60, 28, 8, '#ffffff');
-  poly(c, [[60, 28], [60, 36], [70, 31]], '#ffb627');
-  circle(c, 63, 26, 1.6, '#1b2a3a');
+  c.fillStyle = '#ffd23f';
+  c.beginPath();
+  c.ellipse(74, 44, 10, 6, 0.4, 0, TAU);
+  c.fill();
+  circle(c, 58, 30, 7, '#1f8a4a');
+  poly(c, [[62, 30], [74, 33], [62, 36]], '#ff9a2a');
+  circle(c, 60, 28, 1.5, '#1b2a3a');
 }
 
 function crab(c: Ctx, alt: boolean): void {
-  const body = '#ff6a3d';
-  const dark = '#c4421f';
-  // legs
+  const body = '#8a4a28';
+  const dark = '#4a2814';
   c.strokeStyle = dark;
   c.lineWidth = 5;
   c.lineCap = 'round';
@@ -103,19 +152,23 @@ function crab(c: Ctx, alt: boolean): void {
       c.stroke();
     }
   }
-  // shell + eyes
+  c.fillStyle = '#6b3a1c';
+  c.beginPath();
+  c.ellipse(46, 104, 30, 36, 0, 0, TAU);
+  c.fill();
   c.fillStyle = body;
   c.beginPath();
-  c.ellipse(46, 100, 32, 40, 0, 0, TAU);
+  c.ellipse(46, 98, 28, 34, 0, 0, TAU);
   c.fill();
-  c.strokeStyle = OUTLINE;
+  c.strokeStyle = 'rgba(255,210,150,0.35)';
   c.lineWidth = 2;
+  c.beginPath();
+  c.ellipse(46, 90, 16, 10, 0, Math.PI, 0);
   c.stroke();
-  circle(c, 36, 62, 6, '#ffffff');
-  circle(c, 56, 62, 6, '#ffffff');
-  circle(c, 36, 62, 2.5, '#1b2a3a');
-  circle(c, 56, 62, 2.5, '#1b2a3a');
-  // claws raised, alternating
+  circle(c, 36, 64, 6, '#f4e2c4');
+  circle(c, 56, 64, 6, '#f4e2c4');
+  circle(c, 36, 64, 2.4, '#1b2a3a');
+  circle(c, 56, 64, 2.4, '#1b2a3a');
   const lift = alt ? 10 : 0;
   for (const side of [-1, 1]) {
     const y = side === -1 ? 36 + lift : 46 - lift;
@@ -125,48 +178,150 @@ function crab(c: Ctx, alt: boolean): void {
     c.moveTo(46 + side * 28, 90);
     c.lineTo(46 + side * 36, y + 16);
     c.stroke();
-    poly(c, [[46 + side * 36, y + 16], [46 + side * 22, y], [46 + side * 48, y + 2]], body, OUTLINE, 2);
+    poly(c, [[46 + side * 36, y + 16], [46 + side * 22, y], [46 + side * 48, y + 2]], '#c46a32', dark, 1.5);
   }
 }
 
 // ---- Decor -------------------------------------------------------------------------
 
 function palm(c: Ctx): void {
-  c.strokeStyle = '#8a5a24';
-  c.lineWidth = 9;
+  c.strokeStyle = '#6b4a28';
+  c.lineWidth = 8;
   c.lineCap = 'round';
   c.beginPath();
-  c.moveTo(38, 150);
-  c.quadraticCurveTo(46, 90, 42, 44);
+  c.moveTo(40, 148);
+  c.quadraticCurveTo(52, 90, 44, 48);
   c.stroke();
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * TAU;
-    c.fillStyle = i % 2 ? '#1f9b52' : '#2fbf6a';
+  c.strokeStyle = '#8a6236';
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(38, 140);
+  c.quadraticCurveTo(48, 92, 42, 54);
+  c.stroke();
+  const frond = (rot: number, len: number, color: string) => {
+    c.save();
+    c.translate(44, 46);
+    c.rotate(rot);
+    c.fillStyle = color;
     c.beginPath();
-    c.ellipse(42 + Math.cos(a) * 20, 40 + Math.sin(a) * 9, 24, 7, a, 0, TAU);
+    c.moveTo(0, 0);
+    c.quadraticCurveTo(len * 0.45, -7, len, 0);
+    c.quadraticCurveTo(len * 0.45, 6, 0, 0);
+    c.fill();
+    c.restore();
+  };
+  const greens = ['#146b32', '#1f8a40', '#0e4e28', '#3aa04a'];
+  for (let i = 0; i < 8; i++) frond((i / 8) * TAU, 28 + (i % 3) * 6, greens[i % greens.length]);
+  circle(c, 40, 54, 4, '#5c3a1c');
+  circle(c, 48, 56, 3.5, '#6b4424');
+}
+
+function monstera(c: Ctx): void {
+  const leaf = (x: number, y: number, rot: number, s: number, color: string) => {
+    c.save();
+    c.translate(x, y);
+    c.rotate(rot);
+    c.scale(s, s);
+    c.fillStyle = color;
+    c.beginPath();
+    c.moveTo(0, 18);
+    c.bezierCurveTo(-28, 10, -26, -22, 0, -28);
+    c.bezierCurveTo(26, -22, 28, 10, 0, 18);
+    c.fill();
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    for (const [hx, hy] of [[-8, -6], [7, -2], [-4, 6], [9, 8]] as const) {
+      c.beginPath();
+      c.ellipse(hx, hy, 3.2, 2.2, 0.4, 0, TAU);
+      c.fill();
+    }
+    c.strokeStyle = 'rgba(210,255,170,0.35)';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.moveTo(0, 14);
+    c.lineTo(0, -22);
+    c.stroke();
+    c.restore();
+  };
+  leaf(46, 78, -0.5, 1.15, '#0f5a2c');
+  leaf(28, 96, 0.7, 0.85, '#1c7a3c');
+  leaf(62, 100, -0.2, 0.7, '#248a44');
+}
+
+function fern(c: Ctx): void {
+  c.strokeStyle = '#1a6b34';
+  c.lineWidth = 2;
+  c.lineCap = 'round';
+  const frond = (rot: number) => {
+    c.save();
+    c.translate(40, 120);
+    c.rotate(rot);
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.quadraticCurveTo(8, -40, 0, -78);
+    c.stroke();
+    c.fillStyle = '#2f9a48';
+    for (let i = 0; i < 8; i++) {
+      const y = -10 - i * 8;
+      const w = 7 + (4 - Math.abs(i - 4));
+      c.beginPath();
+      c.ellipse(-6, y, w, 3.2, -0.5, 0, TAU);
+      c.fill();
+      c.beginPath();
+      c.ellipse(6, y, w, 3.2, 0.5, 0, TAU);
+      c.fill();
+    }
+    c.restore();
+  };
+  frond(-0.35);
+  frond(0.25);
+  frond(0.02);
+}
+
+function flower(c: Ctx, x: number, y: number, r: number): void {
+  c.fillStyle = '#e10e2c';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU - Math.PI / 2;
+    c.beginPath();
+    c.ellipse(x + Math.cos(a) * r * 0.42, y + Math.sin(a) * r * 0.42, r * 0.55, r * 0.32, a, 0, TAU);
     c.fill();
   }
-  circle(c, 40, 48, 4, '#6b3a12');
-  circle(c, 47, 50, 4, '#6b3a12');
+  circle(c, x, y, r * 0.28, '#ffd23f');
+  circle(c, x - r * 0.08, y - r * 0.08, r * 0.1, '#fff4b0');
+}
+
+function hibiscus(c: Ctx): void {
+  c.fillStyle = '#145c30';
+  c.beginPath();
+  c.ellipse(40, 92, 34, 26, 0, 0, TAU);
+  c.fill();
+  c.fillStyle = '#1f8a40';
+  c.beginPath();
+  c.ellipse(28, 78, 18, 12, -0.6, 0, TAU);
+  c.fill();
+  c.beginPath();
+  c.ellipse(54, 80, 16, 11, 0.5, 0, TAU);
+  c.fill();
+  flower(c, 26, 62, 14);
+  flower(c, 50, 54, 16);
+  flower(c, 38, 78, 11);
 }
 
 function tikiTorch(c: Ctx): void {
-  box(c, 19, 28, 6, 62, 2, '#8a5a24');
-  poly(c, [[22, 4], [32, 26], [12, 26]], '#ff9a3c');
-  poly(c, [[22, 12], [28, 26], [16, 26]], '#ffd23f');
+  c.fillStyle = '#c4a15a';
+  c.fillRect(18, 28, 8, 60);
+  c.fillStyle = '#6b4e24';
+  for (let y = 36; y < 84; y += 12) c.fillRect(16, y, 12, 3);
+  const flame = c.createRadialGradient(22, 16, 2, 22, 18, 16);
+  flame.addColorStop(0, '#fff1b0');
+  flame.addColorStop(0.45, '#ff9a3c');
+  flame.addColorStop(1, 'rgba(255,80,20,0)');
+  c.fillStyle = flame;
+  c.beginPath();
+  c.ellipse(22, 16, 14, 18, 0, 0, TAU);
+  c.fill();
 }
 
 // ---- Pickups -------------------------------------------------------------------------
-
-function star(cx: number, cy: number, outer: number, inner: number, points: number, rot: number): Pt[] {
-  const pts: Pt[] = [];
-  for (let i = 0; i < points * 2; i++) {
-    const r = i % 2 === 0 ? outer : inner;
-    const a = rot + (i / (points * 2)) * TAU;
-    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-  }
-  return pts;
-}
 
 function glow(c: Ctx, color: string): void {
   const g = c.createRadialGradient(36, 36, 8, 36, 36, 36);
@@ -178,8 +333,20 @@ function glow(c: Ctx, color: string): void {
 
 function starPickup(c: Ctx, rot: number, inner: number): void {
   glow(c, PICKUP_COLORS.basic);
-  poly(c, star(36, 37, 24, inner, 5, rot), PICKUP_COLORS.basic, '#b8860b', 2.5);
-  circle(c, 31, 30, 4, 'rgba(255,255,255,0.7)');
+  // A gold hibiscus. `rot` and `inner` keep the three frames slightly different.
+  c.save();
+  c.translate(36, 37);
+  c.rotate(rot + Math.PI / 2);
+  c.fillStyle = '#ffd23f';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU;
+    c.beginPath();
+    c.ellipse(Math.cos(a) * 10, Math.sin(a) * 10, 12, inner * 0.45, a, 0, TAU);
+    c.fill();
+  }
+  c.restore();
+  circle(c, 36, 37, 6, '#fff1a8');
+  circle(c, 33, 34, 2, 'rgba(255,255,255,0.8)');
 }
 
 function lifeRing(c: Ctx): void {
@@ -245,15 +412,20 @@ function parasailPickup(c: Ctx): void {
 
 /** Canopy drawn behind the runner while the flight power-up lasts. */
 function parasailCanopy(c: Ctx): void {
-  c.fillStyle = vGradient(c, 0, 90, [
-    [0, '#ff5c8a'],
-    [1, '#ffd23f'],
-  ]);
+  const bands = ['#ff5a2a', '#ffd23f', '#ff8a3c', '#fff1b0'];
+  c.save();
   c.beginPath();
   c.ellipse(90, 56, 80, 50, 0, Math.PI, 0);
-  c.fill();
-  c.strokeStyle = OUTLINE;
+  c.clip();
+  for (let i = 0; i < bands.length; i++) {
+    c.fillStyle = bands[i];
+    c.fillRect(10 + i * 40, 0, 42, 70);
+  }
+  c.restore();
+  c.strokeStyle = 'rgba(90,30,10,0.45)';
   c.lineWidth = 2;
+  c.beginPath();
+  c.ellipse(90, 56, 80, 50, 0, Math.PI, 0);
   c.stroke();
   for (let i = 1; i < 4; i++) polyline(c, [[10 + i * 40, 56], [90, 88]], 'rgba(255,255,255,0.7)', 1.5);
 }
@@ -276,7 +448,10 @@ export function generatePropTextures(scene: Phaser.Scene): void {
   makeTexture(scene, 'seagull1', 120, 72, (c) => seagull(c, false));
   makeTexture(scene, 'crab', 92, 150, (c) => crab(c, false));
   makeTexture(scene, 'crab1', 92, 150, (c) => crab(c, true));
-  makeTexture(scene, 'palm', 80, 150, palm);
+  makeTexture(scene, 'palm', 90, 160, palm);
+  makeTexture(scene, 'monstera', 110, 130, monstera);
+  makeTexture(scene, 'fern', 90, 140, fern);
+  makeTexture(scene, 'hibiscus', 100, 120, hibiscus);
   makeTexture(scene, 'tikiTorch', 44, 90, tikiTorch);
 
   makeTexture(scene, 'pickup_star_a', 72, 72, (c) => starPickup(c, -Math.PI / 2, 11));
@@ -289,14 +464,14 @@ export function generatePropTextures(scene: Phaser.Scene): void {
   makeTexture(scene, 'parasail', 180, 90, parasailCanopy);
 
   makeTexture(scene, 'shadow', 80, 22, (c) => {
-    c.fillStyle = 'rgba(40,30,20,0.45)';
+    c.fillStyle = 'rgba(0,0,0,0.45)';
     c.beginPath();
     c.ellipse(40, 11, 36, 9, 0, 0, TAU);
     c.fill();
   });
   makeTexture(scene, 'spark', 16, 16, (c) => softDot(c, 16, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)'));
-  makeTexture(scene, 'petal', 8, 8, (c) => softDot(c, 8, 'rgba(255,170,200,0.95)', 'rgba(255,170,200,0)'));
-  makeTexture(scene, 'confetti', 10, 10, (c) => poly(c, [[1, 4], [5, 0], [9, 3], [7, 9], [2, 8]], '#ff9ec7'));
+  makeTexture(scene, 'petal', 8, 8, (c) => softDot(c, 8, 'rgba(225,14,44,0.95)', 'rgba(225,14,44,0)'));
+  makeTexture(scene, 'confetti', 10, 10, (c) => poly(c, [[1, 4], [5, 0], [9, 3], [7, 9], [2, 8]], '#e10e2c'));
   makeTexture(scene, 'aura', 128, 128, (c) => {
     const g = c.createRadialGradient(64, 64, 30, 64, 64, 62);
     g.addColorStop(0, 'rgba(255,255,255,0)');

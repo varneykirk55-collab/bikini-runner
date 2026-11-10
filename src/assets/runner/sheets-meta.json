@@ -1,0 +1,288 @@
+{
+  "frameWidth": 303,
+  "frameHeight": 430,
+  "originX": 0.5115511551155115,
+  "originY": 0.9484765369303741,
+  "originPx": [
+    155.0,
+    407.84
+  ],
+  "uniformScale": true,
+  "pxPerMetre": 196.2301746584861,
+  "cameraOrthoScale": 2.1913042068481445,
+  "cameraLocation": [
+    0.017836114391684532,
+    5.872436046600342,
+    1.589487910270691
+  ],
+  "cameraDirection": [
+    0.0,
+    -0.9950371980667114,
+    -0.09950372576713562
+  ],
+  "renderer": "Blender 5.2.3 Workbench, STUDIO paint.sl, texture colour, shadows on, no outline/cavity/specular, Standard view transform, transparent film (same as valhalla-rush-assets/work/bake_slide.py)",
+  "suggestedRunnerScale": 0.5267460109861366,
+  "suggestedSlideScale": 0.5267460109861366,
+  "sheets": {
+    "run": {
+      "file": "run.png",
+      "frames": 8,
+      "loop": true,
+      "sourceClip": "Run (Mixamo Fast Run)",
+      "sourceFrameRange": [
+        1,
+        17
+      ],
+      "sourceFPS": 30,
+      "sampledFrames": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "cycleSeconds": 0.5333333333333333,
+      "fpsAt1x": 15.0,
+      "grounding": "in place (hips X/Y travel removed); natural vertical bob kept; lowest planted foot of the cycle = origin line",
+      "standingAlphaHeightPx": [
+        309.8,
+        300.8,
+        304.8,
+        310.8,
+        308.8,
+        299.8,
+        302.8,
+        306.8
+      ]
+    },
+    "jump": {
+      "file": "jump.png",
+      "frames": 8,
+      "loop": false,
+      "sourceClip": "RunningJump",
+      "sourceFrameRange": [
+        1,
+        28
+      ],
+      "sourceFPS": 30,
+      "sampledFrames": [
+        1,
+        5,
+        9,
+        13,
+        16,
+        20,
+        24,
+        28
+      ],
+      "durationSeconds": 0.9,
+      "fps": 8.88888888888889,
+      "grounding": "every frame planted: lowest point on the origin line (physics supplies the hop)",
+      "perFrameGroundCorrectionMetres": [
+        -0.0021391836926341057,
+        -0.13954704906791449,
+        -0.5505043854936957,
+        -0.6205946197733283,
+        -0.3638931205496192,
+        -0.004038448445498943,
+        -0.05577419605106115,
+        -0.0021786121651530266
+      ]
+    },
+    "slide": {
+      "file": "slide.png",
+      "frames": 8,
+      "loop": false,
+      "sourceClip": "RunningSlide (v2 rig, floor-corrected)",
+      "sourceFrameRange": [
+        1,
+        47
+      ],
+      "sourceFPS": 30,
+      "sampledFrames": [
+        1,
+        8,
+        14,
+        21,
+        27,
+        34,
+        40,
+        47
+      ],
+      "durationSeconds": 1.5333333333333334,
+      "fps": 5.217391304347826,
+      "grounding": "every frame: lowest point (hand/hip/foot contact) on the origin line",
+      "perFrameGroundCorrectionMetres": [
+        -0.004002169705927372,
+        -0.015132813714444637,
+        0.010843575932085514,
+        0.0073948511853814125,
+        0.011027089320123196,
+        0.008626186288893223,
+        -0.020511223934590816,
+        -0.004003030247986317
+      ]
+    },
+    "idle": {
+      "file": "idle.png",
+      "frames": 1,
+      "pose": "standing, arms down",
+      "alphaHeightPx": 332.8
+    }
+  },
+  "frameAlphaBBoxes": {
+    "run-0": [
+      106,
+      98,
+      201,
+      412
+    ],
+    "run-1": [
+      89,
+      107,
+      190,
+      414
+    ],
+    "run-2": [
+      86,
+      103,
+      191,
+      386
+    ],
+    "run-3": [
+      103,
+      97,
+      196,
+      404
+    ],
+    "run-4": [
+      111,
+      99,
+      230,
+      410
+    ],
+    "run-5": [
+      118,
+      108,
+      243,
+      410
+    ],
+    "run-6": [
+      116,
+      105,
+      242,
+      387
+    ],
+    "run-7": [
+      115,
+      101,
+      213,
+      406
+    ],
+    "jump-0": [
+      94,
+      99,
+      204,
+      413
+    ],
+    "jump-1": [
+      63,
+      86,
+      188,
+      416
+    ],
+    "jump-2": [
+      40,
+      133,
+      233,
+      416
+    ],
+    "jump-3": [
+      26,
+      147,
+      275,
+      410
+    ],
+    "jump-4": [
+      52,
+      103,
+      268,
+      397
+    ],
+    "jump-5": [
+      88,
+      92,
+      192,
+      405
+    ],
+    "jump-6": [
+      114,
+      110,
+      196,
+      412
+    ],
+    "jump-7": [
+      94,
+      99,
+      204,
+      413
+    ],
+    "slide-0": [
+      106,
+      94,
+      206,
+      409
+    ],
+    "slide-1": [
+      88,
+      188,
+      240,
+      406
+    ],
+    "slide-2": [
+      117,
+      288,
+      289,
+      414
+    ],
+    "slide-3": [
+      107,
+      305,
+      294,
+      420
+    ],
+    "slide-4": [
+      88,
+      229,
+      278,
+      409
+    ],
+    "slide-5": [
+      91,
+      152,
+      226,
+      417
+    ],
+    "slide-6": [
+      113,
+      126,
+      236,
+      417
+    ],
+    "slide-7": [
+      106,
+      94,
+      206,
+      409
+    ],
+    "idle-0": [
+      89,
+      75,
+      221,
+      410
+    ]
+  }
+}

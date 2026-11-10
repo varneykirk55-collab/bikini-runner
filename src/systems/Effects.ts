@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DEPTH, FONT, GAME_W } from '../config';
+import { DEPTH, FONT, GAME_W, HORIZON_Y } from '../config';
 
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
 
@@ -47,6 +47,7 @@ export class Effects {
         gravityY: 160, // kicked up, then drifting back down toward the camera
         scale: { start: 1.6, end: 0.5 },
         alpha: { start: 0.75, end: 0 },
+        tint: [0x2a2a2a, 0x5c4030],
         lifespan: { min: 280, max: 420 },
         emitting: false,
       })
@@ -58,14 +59,14 @@ export class Effects {
     scene.add
       .particles(0, 0, 'petal', {
         x: { min: -20, max: GAME_W + 20 },
-        y: -10,
-        lifespan: 9000,
-        speedY: { min: 40, max: 110 },
-        speedX: { min: -35, max: 10 },
-        scale: { min: 0.5, max: 1.4 },
-        alpha: { min: 0.35, max: 0.85 },
-        frequency: 90,
-        advance: 6000,
+        y: { min: HORIZON_Y + 8, max: HORIZON_Y + 80 },
+        lifespan: 7000,
+        speedY: { min: 50, max: 130 },
+        speedX: { min: -25, max: 15 },
+        scale: { min: 0.45, max: 1.1 },
+        alpha: { min: 0.3, max: 0.7 },
+        frequency: 260,
+        advance: 4000,
       })
       .setDepth(DEPTH.fx - 1);
   }

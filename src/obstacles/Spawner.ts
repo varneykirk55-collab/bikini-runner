@@ -47,10 +47,10 @@ export class Spawner {
   private sinceSky = 0;
   private rowsSincePower = 0;
   private sinceDecor = 0;
-  private nextDecor = 2;
+  private nextDecor = 3.2;
 
   constructor(private readonly scene: Phaser.Scene) {
-    for (let z = -2; z < SPAWN_Z; z += Phaser.Math.FloatBetween(1.6, 3)) this.spawnDecor(z);
+    for (let z = -1; z < SPAWN_Z; z += Phaser.Math.FloatBetween(2.8, 4.4)) this.spawnDecor(z);
   }
 
   update(dt: number, speed: number, difficulty: number, magnet: { x: number; h: number } | null, flightLeft = 0): void {
@@ -75,7 +75,7 @@ export class Spawner {
     this.sinceDecor += dz;
     if (this.sinceDecor >= this.nextDecor) {
       this.sinceDecor = 0;
-      this.nextDecor = Phaser.Math.FloatBetween(1.6, 3.2);
+      this.nextDecor = Phaser.Math.FloatBetween(2.8, 4.4);
       this.spawnDecor(SPAWN_Z + 4);
     }
 
@@ -204,9 +204,17 @@ export class Spawner {
   }
 
   private spawnDecor(z: number): void {
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const laneX = side * Phaser.Math.FloatBetween(2.25, 4.4);
-    const kind = Math.random() < 0.1 ? 'tikiTorch' : 'palm';
-    this.decor.push(new Decor(this.scene, kind, laneX, z));
+    // The painted walls already fill the shoulders. These are scattered accents on top.
+    const plants = ['palm', 'youngPalm', 'monstera', 'fern', 'hibiscus', 'banana', 'heliconia', 'hibiscus'] as const;
+    for (const side of [-1, 1] as const) {
+      const kind = plants[Math.floor(Math.random() * plants.length)];
+      const close = kind === 'hibiscus' || kind === 'monstera';
+      const laneX = side * Phaser.Math.FloatBetween(close ? 1.78 : 2.05, close ? 2.25 : 2.9);
+      this.decor.push(new Decor(this.scene, kind, laneX, z + Phaser.Math.FloatBetween(-0.4, 0.4)));
+    }
+    if (Math.random() < 0.22) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      this.decor.push(new Decor(this.scene, 'tikiTorch', side * Phaser.Math.FloatBetween(1.85, 2.15), z + 0.6));
+    }
   }
 }
