@@ -26,20 +26,26 @@ puffs. There is no blend tree and none was invented. All of it is covered by `te
 - Feet anchored at **x = 0.5116 × 303, y = 0.9485 × 430** in every frame (`RUNNER.originX/originY`).
 - Run and jump are in-place: the track moves, not the character. Jump poses are planted on the ground; the
   physics hop supplies the height.
-- Frames are drawn at one scale. `RUNNER.scale` (0.4242) maps texture pixels to game pixels so hair-to-ground is
-  about 1.119 m at `UNIT_PX`.
-- If the slide sheet is baked with a wider camera than run/jump (the original was), standing silhouettes will be
-  smaller; measure standing alpha height in run vs slide and set `RUNNER.slideScale = scale × (runHeight / slideHeight)`.
-  The original ratio was 389 / 274.
+- Frames are drawn at one scale. `RUNNER.scale` = `RUNNER.slideScale` = **0.5267** (`0.5267460109861366`).
+  The baked run silhouette is about 306 px tall (the previous figure was about 380 px). This scale maps that
+  silhouette to the same hair-to-ground height, about 1.119 m at `UNIT_PX`, so `PLAYER.standHeight` (0.92) and
+  `PLAYER.slideHeight` (0.45) still sit on the body. The low slide pose is about 0.42 units, under the limbo bar.
+- Every current sheet, including slide and idle, was baked with the same camera, so no slide-size correction
+  is applied. If a future slide sheet uses a wider camera, measure standing alpha height in run vs slide and set
+  `RUNNER.slideScale = scale × (runHeight / slideHeight)`.
+- `idle.png` is a single 303 × 430 standing frame, loaded as `runner_idle`. The title, a grounded pause, and the
+  wipeout tumble use it. Action playback is unchanged: flight > airborne > sliding > running.
 
 If a new character changes frame size or frame counts, edit **only** `src/player/animation.ts`.
 
-## What was changed from Valhalla Run
+## What the sheets are
 
-- The shipped sheets are neutral placeholder mannequins (`tools/make_placeholder_sheets.py`), not the Viking
-  renders, because the sheets *are* the Viking character and must not carry over.
-- `slideScale` equals `scale` for the placeholders (no wider-camera correction needed).
-- Nothing else about timing or behaviour was changed.
+- The shipped sheets are the bikini runner, baked from the rigged model at
+  `src/assets/runner/bikini_runner_web.glb` (Draco + WebP). That file is a source asset. The game does not load it.
+- Per-frame bounds and the scale recommendation live in `src/assets/runner/sheets-meta.json`.
+- `tools/make_placeholder_sheets.py` only regenerates the old mannequins. It is not the shipped art.
+- Timing and behaviour are unchanged: run loops on `runCycle` (0.5333 s), jump frames follow airtime, slide plays
+  once across `PLAYER.slideTime` (0.7 s) with floor contact kept.
 
 ## Original authoring metadata
 

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Music } from '../audio/Music';
 import { DEPTH, GAME_W } from '../config';
-import { RUNNER, SHEET_KEYS } from '../player/animation';
+import { IDLE_KEY, RUNNER } from '../player/animation';
 import { sfx } from '../audio/Sfx';
 import { Decor } from '../entities/Decor';
 import { PICKUP_COLORS } from '../gfx/props';
@@ -44,7 +44,7 @@ export class MenuScene extends Phaser.Scene {
     const ground = this.proj.project(0, 0, 0);
     this.add.image(ground.x, ground.y, 'shadow').setDepth(DEPTH.shadow).setAlpha(0.55);
     this.hero = this.add
-      .image(ground.x, ground.y, SHEET_KEYS.run, 0)
+      .image(ground.x, ground.y, IDLE_KEY)
       .setOrigin(RUNNER.originX, RUNNER.originY)
       .setScale(RUNNER.scale)
       .setDepth(DEPTH.player);
@@ -220,7 +220,7 @@ export class MenuScene extends Phaser.Scene {
 
   update(_t: number, deltaMs: number): void {
     const dt = Math.min(deltaMs, 50) / 1000;
-    // A slow jog in place keeps the title screen alive.
+    // The beach keeps scrolling; she holds the standing pose.
     this.drift += dt * 5;
     for (const d of this.decor) {
       d.update(dt, 5);
@@ -229,8 +229,6 @@ export class MenuScene extends Phaser.Scene {
     }
     this.background.update(dt, this.proj, 3);
     this.track.draw(this.proj, this.drift);
-    // A slow jog: drift advances at 5 units/second (see above).
-    const frame = Math.floor(this.drift * 1.5) % RUNNER.runFrames;
-    if (this.hero.frame.name !== String(frame)) this.hero.setTexture(SHEET_KEYS.run, frame);
+    // She waits in the standing pose. The track drift above keeps the beach moving.
   }
 }

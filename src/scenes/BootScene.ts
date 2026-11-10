@@ -1,20 +1,21 @@
 import Phaser from 'phaser';
 import { Music } from '../audio/Music';
 import { sfx } from '../audio/Sfx';
+import idleSheet from '../assets/runner/idle.png';
 import jumpSheet from '../assets/runner/jump.png';
 import runSheet from '../assets/runner/run.png';
 import slideSheet from '../assets/runner/slide.png';
 import { GAME_W } from '../config';
 import { generatePropTextures } from '../gfx/props';
 import { generateSceneryTextures } from '../gfx/scenery';
-import { RUNNER, SHEET_KEYS } from '../player/animation';
+import { IDLE_KEY, RUNNER, SHEET_KEYS } from '../player/animation';
 import { UI_FONT } from '../ui/theme';
 
 /**
- * Loads the three runner sprite sheets (PLACEHOLDER mannequins until the real
- * character is baked), then draws all scenery, obstacles, pickups and UI-adjacent
- * textures procedurally. Generators skip keys that already exist, so any texture
- * can be replaced by loading a real image under the same key in preload().
+ * Loads the runner sprite sheets and the standing idle frame, then draws scenery,
+ * obstacles, pickups and UI textures procedurally. Generators skip keys that
+ * already exist, so a real image loaded under the same key in preload() wins.
+ * The rigged model beside the sheets is a source asset and is not loaded here.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -40,6 +41,7 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet(SHEET_KEYS.run, runSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.jump, jumpSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.slide, slideSheet, frameConfig);
+    this.load.image(IDLE_KEY, idleSheet);
   }
 
   create(): void {

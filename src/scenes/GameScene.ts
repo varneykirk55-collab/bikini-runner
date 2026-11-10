@@ -69,9 +69,12 @@ export class GameScene extends Phaser.Scene {
     const keyPause = () => this.pause();
     this.input.keyboard?.on('keydown-ESC', keyPause);
     this.input.keyboard?.on('keydown-P', keyPause);
+    const releasePose = () => this.player.releaseHold();
+    this.events.on(Phaser.Scenes.Events.RESUME, releasePose);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ESC', keyPause);
       this.input.keyboard?.off('keydown-P', keyPause);
+      this.events.off(Phaser.Scenes.Events.RESUME, releasePose);
     });
 
     // The menu tap already started the playlist. A restart keeps that song
@@ -85,7 +88,10 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== 'running' || this.scene.isPaused()) return;
     const resumedAt = (this.registry.get(RESUMED_AT) as number | undefined) ?? -Infinity;
     if (this.game.loop.time - resumedAt < 250) return; // same key press that just resumed
+    // A grounded runner stands. Mid-jump and mid-slide keep the action frame.
     // Scene pause freezes the world, tweens, timers and particles; songs and effects pause too.
+    // A paused scene still renders, so the standing frame stays on screen.
+    this.player.holdForPause();
     Music.of(this).pause();
     this.game.sound.pauseAll();
     this.scene.pause();

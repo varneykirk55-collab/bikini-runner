@@ -1,12 +1,13 @@
 # Bikini Runner
 
-Browser-first, mobile-focused endless runner. **Phase 1 foundation**: the gameplay, animation system, audio
-infrastructure and UI of an existing runner, carried into a separate project with placeholder visuals ready to be
-replaced. Stack: Phaser 3.90 + TypeScript + Vite, portrait, pseudo-3D three-lane track.
+Browser-first, mobile-focused endless runner. Stack: Phaser 3.90 + TypeScript + Vite, portrait, pseudo-3D
+three-lane track.
 
-> **All art and music in this build is temporary placeholder.** The runner is a neutral faceless mannequin, the
-> world is flat-shaded procedural shapes, the music is three synthesised loops. The final character has not been
-> added; see [docs/HUNYUAN_INTEGRATION.md](docs/HUNYUAN_INTEGRATION.md).
+The runner is the baked bikini character: `run.png`, `jump.png`, `slide.png` and `idle.png` in
+`src/assets/runner/`, drawn at one scale (`RUNNER.scale` = `RUNNER.slideScale` = 0.5267). The rigged model
+`bikini_runner_web.glb` sits beside those sheets as a source asset and is not loaded; the game stays 2D.
+Scenery, obstacles and music are still placeholder. See [docs/ANIMATION_CONTRACT.md](docs/ANIMATION_CONTRACT.md)
+and [docs/HUNYUAN_INTEGRATION.md](docs/HUNYUAN_INTEGRATION.md).
 
 ## Run
 
@@ -73,9 +74,9 @@ World model: every object has a `lane`, a `z` (distance ahead along the path) an
 ## Replacing placeholders
 
 Everything procedural is generated at boot and **skips any texture key that already exists**, so a real image
-loaded under the same key in `BootScene.preload()` wins. Runner sheets: replace the three PNGs in
-`src/assets/runner/` with sheets that follow `docs/ANIMATION_CONTRACT.md`. Music: replace the MP3s and edit
-`src/audio/tracks.ts`.
+loaded under the same key in `BootScene.preload()` wins. The runner sheets already follow
+`docs/ANIMATION_CONTRACT.md` (`runner_run`, `runner_jump`, `runner_slide`, plus `runner_idle`). Music: replace
+the MP3s and edit `src/audio/tracks.ts`.
 
 ## Status
 

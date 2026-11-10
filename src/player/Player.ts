@@ -4,7 +4,7 @@ import { CameraRig } from '../camera/CameraRig';
 import { DEPTH } from '../config';
 import { Span } from '../collision/collision';
 import { STRIDE_EVENT } from '../systems/Effects';
-import { RUNNER, SHEET_KEYS } from './animation';
+import { IDLE_KEY, RUNNER, SHEET_KEYS } from './animation';
 import { PlayerMotion } from './PlayerMotion';
 
 /**
@@ -15,6 +15,8 @@ import { PlayerMotion } from './PlayerMotion';
 export class Player {
   readonly motion: PlayerMotion;
   private lastStride = -1;
+  /** While set, render keeps the standing frame (grounded pause). Cleared on resume. */
+  private holdStanding = false;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly aura: Phaser.GameObjects.Image;
@@ -80,6 +82,24 @@ export class Player {
     return this.motion.span();
   }
 
+  /**
+   * Stand still. Used when a pause catches her with her feet on the ground.
+   * Airborne and slide poses are left alone: a stand would float or pop her upright.
+   * Applied immediately, and again from render(), because this frame's update can
+   * still run after the key or pointer that paused the scene.
+   */
+  holdForPause(): void {
+    const m = this.motion;
+    if (!m.alive || m.airborne || m.sliding || m.h > 0.02) return;
+    this.holdStanding = true;
+    this.showIdleFrame();
+    this.sprite.setScale(RUNNER.scale).setRotation(0);
+  }
+
+  releaseHold(): void {
+    this.holdStanding = false;
+  }
+
   // ---- View ---------------------------------------------------------------------
   render(proj: CameraRig, shieldOn: boolean): void {
     const m = this.motion;
@@ -95,22 +115,27 @@ export class Player {
     const stride = m.stride;
     if (stride !== this.lastStride) {
       this.lastStride = stride;
-      if (!m.airborne && !m.sliding) this.scene.events.emit(STRIDE_EVENT, ground.x, ground.y);
+      if (!this.holdStanding && !m.airborne && !m.sliding) this.scene.events.emit(STRIDE_EVENT, ground.x, ground.y);
     }
 
     const p = proj.project(m.x, 0, m.h);
-    const pose = m.pose();
-    const key = SHEET_KEYS[pose.key];
-    const frameName = String(pose.frame);
-    if (this.sprite.texture.key !== key || this.sprite.frame.name !== frameName) {
-      this.sprite.setTexture(key, pose.frame);
+    if (this.holdStanding) {
+      this.showIdleFrame();
+    } else {
+      const pose = m.pose();
+      const key = SHEET_KEYS[pose.key];
+      const frameName = String(pose.frame);
+      if (this.sprite.texture.key !== key || this.sprite.frame.name !== frameName) {
+        this.sprite.setTexture(key, pose.frame);
+      }
     }
 
     // The baked run already bounces. Keep the feet planted on the ground anchor.
+    // Slide uses the same scale as run: every sheet was baked with one camera.
     this.sprite
       .setPosition(p.x, p.y)
-      .setRotation((m.lane - m.x) * 0.25)
-      .setScale(m.sliding ? RUNNER.slideScale : RUNNER.scale)
+      .setRotation(this.holdStanding ? 0 : (m.lane - m.x) * 0.25)
+      .setScale(this.holdStanding ? RUNNER.scale : m.sliding ? RUNNER.slideScale : RUNNER.scale)
       .setAlpha(m.invuln > 0 && Math.floor(m.invuln * 20) % 2 === 0 ? 0.35 : 1);
 
     this.canopy.setVisible(m.flying);
@@ -128,12 +153,14 @@ export class Player {
     }
   }
 
-  /** Death animation: knocked back and tumbling. */
+  /** Death animation: standing pose, knocked back and tumbling. */
   crash(): { x: number; y: number } {
+    this.holdStanding = false;
     this.motion.alive = false;
     this.aura.setVisible(false);
     this.canopy.setVisible(false);
-    this.sprite.setTint(0xff9a8a).setAlpha(1);
+    this.showIdleFrame();
+    this.sprite.setScale(RUNNER.scale).setRotation(0).setTint(0xff9a8a).setAlpha(1);
     const x = this.sprite.x;
     const y = this.sprite.y;
     this.scene.tweens.add({
@@ -144,5 +171,11 @@ export class Player {
       ease: 'Quad.easeOut',
     });
     return { x, y: y - 50 };
+  }
+
+  private showIdleFrame(): void {
+    if (this.sprite.texture.key !== IDLE_KEY) {
+      this.sprite.setTexture(IDLE_KEY).setOrigin(RUNNER.originX, RUNNER.originY);
+    }
   }
 }
