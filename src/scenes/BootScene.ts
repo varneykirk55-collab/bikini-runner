@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Music } from '../audio/Music';
 import { sfx } from '../audio/Sfx';
+import backdropImage from '../assets/backdrop/backdrop.jpg';
 import jumpSheet from '../assets/runner/jump.png';
 import runSheet from '../assets/runner/run.png';
 import slideSheet from '../assets/runner/slide.png';
@@ -37,6 +38,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     const frameConfig = { frameWidth: RUNNER.frameWidth, frameHeight: RUNNER.frameHeight };
+    this.load.image('backdrop', backdropImage);
     this.load.spritesheet(SHEET_KEYS.run, runSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.jump, jumpSheet, frameConfig);
     this.load.spritesheet(SHEET_KEYS.slide, slideSheet, frameConfig);

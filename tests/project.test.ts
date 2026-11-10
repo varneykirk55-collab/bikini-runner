@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { GAME_W, HORIZON_Y } from '../src/config';
 import { RUNNER, SHEET_KEYS } from '../src/player/animation';
 import { OBSTACLES } from '../src/obstacles/defs';
 import { POWER_KINDS } from '../src/systems/PowerUps';
@@ -94,6 +95,8 @@ test('every texture key referenced in code has a generator or a loaded sheet', (
     for (const m of read(file).matchAll(/makeTexture\(\s*scene,\s*'([A-Za-z0-9_]+)'/g)) generated.add(m[1]);
   }
   for (const key of Object.values(SHEET_KEYS)) generated.add(key);
+  // images loaded straight from files in BootScene
+  for (const m of read(join(ROOT, 'src', 'scenes', 'BootScene.ts')).matchAll(/load\.image\(\s*'([A-Za-z0-9_]+)'/g)) generated.add(m[1]);
   assert.ok(generated.size > 20, 'found the generators');
 
   const needed = new Set<string>(['pickup_star_a', 'pickup_star_b', 'pickup_star_c', 'palm', 'tikiTorch', 'parasail']);
@@ -110,6 +113,27 @@ test('every texture key referenced in code has a generator or a loaded sheet', (
     for (const re of literalRes) for (const m of code.matchAll(re)) needed.add(m[1]);
   }
   for (const key of needed) assert.ok(generated.has(key), `texture '${key}' is used but never generated`);
+});
+
+test('backdrop image exists and fits the horizon band (540 x HORIZON_Y)', () => {
+  const buf = readFileSync(join(ROOT, 'src', 'assets', 'backdrop', 'backdrop.jpg'));
+  assert.ok(buf.length < 400_000, 'backdrop stays small for mobile');
+  // JPEG: find the SOF marker for dimensions
+  let i = 2;
+  let w = 0;
+  let h = 0;
+  while (i < buf.length) {
+    const marker = buf[i + 1];
+    const len = buf.readUInt16BE(i + 2);
+    if (marker >= 0xc0 && marker <= 0xc3) {
+      h = buf.readUInt16BE(i + 5);
+      w = buf.readUInt16BE(i + 7);
+      break;
+    }
+    i += 2 + len;
+  }
+  assert.ok(w > 0 && h > 0, 'read jpeg size');
+  assert.ok(Math.abs(w / h - GAME_W / HORIZON_Y) < 0.01, `backdrop ${w}x${h} matches ${GAME_W}x${HORIZON_Y}`);
 });
 
 test('placeholder music files exist and are small enough for mobile', () => {

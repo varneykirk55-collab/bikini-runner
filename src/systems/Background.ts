@@ -23,43 +23,19 @@ function newStreak(r = Phaser.Math.FloatBetween(20, 380)): Streak {
  * faster as the run speeds up, and a few speed streaks scale with speed.
  */
 export class Background {
-  private readonly far: Phaser.GameObjects.Image;
-  private readonly mid: Phaser.GameObjects.Image;
-  private readonly palms: Phaser.GameObjects.Image;
-  private readonly ocean: Phaser.GameObjects.Image;
-  private readonly resort: Phaser.GameObjects.Image;
-  private readonly clouds: Phaser.GameObjects.TileSprite;
-  private readonly sunGlow: Phaser.GameObjects.Image;
+  private clouds?: Phaser.GameObjects.TileSprite;
   private cloudScroll = 0;
   // Speed streaks: sparse radial lines whose alpha scales with run speed.
   private readonly streakGfx: Phaser.GameObjects.Graphics;
   private readonly streaks: Streak[] = [];
 
   constructor(scene: Phaser.Scene) {
-    scene.add.image(0, 0, 'sky').setOrigin(0, 0).setDepth(DEPTH.sky);
-    this.sunGlow = scene.add
-      .image(GAME_W / 2, 40, 'sunGlow')
-      .setOrigin(0.5, 0)
-      .setDepth(DEPTH.sunGlow)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setAlpha(0.95);
-    scene.tweens.add({ targets: this.sunGlow, alpha: 0.6, duration: 4200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    this.far = scene.add.image(GAME_W / 2, 0, 'farIslands').setOrigin(0.5, 1).setDepth(DEPTH.farIslands);
-    this.ocean = scene.add.image(GAME_W / 2, 0, 'ocean').setOrigin(0.5, 1).setDepth(DEPTH.ocean);
-    // Fractional depths slot the new layers between the existing ones without touching DEPTH.
-    this.mid = scene.add.image(GAME_W / 2, 0, 'midIslands').setOrigin(0.5, 1).setDepth(DEPTH.ocean + 0.5);
-    this.resort = scene.add.image(GAME_W / 2, 0, 'resort').setOrigin(0.5, 1).setDepth(DEPTH.resort);
-    this.palms = scene.add.image(GAME_W / 2, 0, 'palmRidge').setOrigin(0.5, 1).setDepth(DEPTH.resort + 0.5);
-    this.clouds = scene.add.tileSprite(GAME_W / 2, 0, GAME_W, 180, 'clouds').setOrigin(0.5, 1).setDepth(DEPTH.clouds).setAlpha(0.9);
-
-    // Static backdrop: no sideways parallax on lane changes, no bob on jumps.
-    this.far.setPosition(GAME_W / 2, HORIZON_Y - 36);
-    this.ocean.setPosition(GAME_W / 2, HORIZON_Y + 8);
-    this.mid.setPosition(GAME_W / 2, HORIZON_Y - 2);
-    this.resort.setPosition(GAME_W / 2, HORIZON_Y + 14);
-    this.palms.setPosition(GAME_W / 2, HORIZON_Y + 18);
-    this.clouds.setPosition(GAME_W / 2, HORIZON_Y + 40);
+    if (scene.textures.exists('backdrop')) {
+      // Painted scenery from the art direction: one static image down to the horizon.
+      scene.add.image(0, 0, 'backdrop').setOrigin(0, 0).setDisplaySize(GAME_W, HORIZON_Y).setDepth(DEPTH.sky);
+    } else {
+      this.buildProceduralBackdrop(scene);
+    }
     // The ground still dips when the camera rises on a jump; this fixed strip of the
     // same sand fills the band it uncovers below the static backdrop.
     scene.add.image(0, HORIZON_Y, 'sandfield').setOrigin(0, 0).setDisplaySize(GAME_W, 140).setDepth(DEPTH.sandfield - 0.5);
@@ -69,11 +45,41 @@ export class Background {
     for (let i = 0; i < STREAK_COUNT; i++) this.streaks.push(newStreak());
   }
 
+  /** Fallback layered backdrop (all PLACEHOLDER art), used when no 'backdrop' image is loaded. */
+  private buildProceduralBackdrop(scene: Phaser.Scene): void {
+    scene.add.image(0, 0, 'sky').setOrigin(0, 0).setDepth(DEPTH.sky);
+    const sunGlow = scene.add
+      .image(GAME_W / 2, 40, 'sunGlow')
+      .setOrigin(0.5, 0)
+      .setDepth(DEPTH.sunGlow)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.95);
+    scene.tweens.add({ targets: sunGlow, alpha: 0.6, duration: 4200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    const far = scene.add.image(GAME_W / 2, 0, 'farIslands').setOrigin(0.5, 1).setDepth(DEPTH.farIslands);
+    const ocean = scene.add.image(GAME_W / 2, 0, 'ocean').setOrigin(0.5, 1).setDepth(DEPTH.ocean);
+    // Fractional depths slot the new layers between the existing ones without touching DEPTH.
+    const mid = scene.add.image(GAME_W / 2, 0, 'midIslands').setOrigin(0.5, 1).setDepth(DEPTH.ocean + 0.5);
+    const resort = scene.add.image(GAME_W / 2, 0, 'resort').setOrigin(0.5, 1).setDepth(DEPTH.resort);
+    const palms = scene.add.image(GAME_W / 2, 0, 'palmRidge').setOrigin(0.5, 1).setDepth(DEPTH.resort + 0.5);
+    this.clouds = scene.add.tileSprite(GAME_W / 2, 0, GAME_W, 180, 'clouds').setOrigin(0.5, 1).setDepth(DEPTH.clouds).setAlpha(0.9);
+
+    // Static backdrop: no sideways parallax on lane changes, no bob on jumps.
+    far.setPosition(GAME_W / 2, HORIZON_Y - 36);
+    ocean.setPosition(GAME_W / 2, HORIZON_Y + 8);
+    mid.setPosition(GAME_W / 2, HORIZON_Y - 2);
+    resort.setPosition(GAME_W / 2, HORIZON_Y + 14);
+    palms.setPosition(GAME_W / 2, HORIZON_Y + 18);
+    this.clouds.setPosition(GAME_W / 2, HORIZON_Y + 40);
+  }
+
   update(dt: number, proj: CameraRig, speed: number): void {
     // Islands, ocean, resort and palms stay put (positioned once in the constructor);
     // only the clouds drift, faster as the run speeds up.
-    this.cloudScroll += dt * (10 + speed * 1.5);
-    this.clouds.tilePositionX = this.cloudScroll;
+    if (this.clouds) {
+      this.cloudScroll += dt * (10 + speed * 1.5);
+      this.clouds.tilePositionX = this.cloudScroll;
+    }
     this.drawStreaks(dt, proj, speed);
   }
 
