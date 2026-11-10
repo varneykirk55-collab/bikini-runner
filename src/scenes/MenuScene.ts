@@ -37,8 +37,12 @@ export class MenuScene extends Phaser.Scene {
     this.background = new Background(this);
     this.track = new TrackRenderer(this);
     this.decor = [];
-    for (let z = 2; z < 70; z += 3.2) {
-      this.decor.push(new Decor(this, 'palm', (z % 2 > 1 ? -1 : 1) * Phaser.Math.FloatBetween(2.3, 4), z));
+    const plants = ['palm', 'monstera', 'fern', 'hibiscus'] as const;
+    for (let z = 1.2; z < 70; z += 1.6) {
+      for (const side of [-1, 1] as const) {
+        const kind = plants[Math.floor(Phaser.Math.Between(0, plants.length - 1))];
+        this.decor.push(new Decor(this, kind, side * Phaser.Math.FloatBetween(1.95, 3.3), z));
+      }
     }
 
     const ground = this.proj.project(0, 0, 0);
@@ -81,7 +85,6 @@ export class MenuScene extends Phaser.Scene {
     const plate = this.add.image(0, 0, logoTexture(this)).setOrigin(0.5, 0);
     const word = sunFill(uiText(this, 0, 138, 'BIKINI', 72, { stroke: '#7a2a10', strokeThickness: 10 }).setOrigin(0.5));
     const run = sunFill(uiText(this, 0, 208, 'RUNNER', 64, { stroke: '#7a2a10', strokeThickness: 10 }).setOrigin(0.5));
-    const tag = uiText(this, 0, 262, 'PLACEHOLDER ART', 18, { color: UI.sunLight, stroke: '#7a2a10', strokeThickness: 4 }).setOrigin(0.5);
     const glows = [-1, 1].map((side) =>
       this.add
         .image(side * 131, 178, 'spark')
@@ -90,7 +93,7 @@ export class MenuScene extends Phaser.Scene {
         .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(0.25),
     );
-    const logo = this.add.container(cx, 26, [...glows, plate, word, run, tag]).setDepth(DEPTH.hud);
+    const logo = this.add.container(cx, 26, [...glows, plate, word, run]).setDepth(DEPTH.hud);
     this.tweens.add({ targets: glows, alpha: 0.7, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: logo, y: 32, duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
@@ -178,13 +181,13 @@ export class MenuScene extends Phaser.Scene {
       line(196, 'Swipe up: jump   ·   Swipe down: slide'),
       line(224, 'Keys: arrows / WASD / space   ·   Esc: pause', UI.muted, 16),
       label(268, 'DANGERS'),
-      line(300, 'Jump over sandcastles and sea urchins'),
-      line(328, 'Slide under limbo banners and seagulls'),
-      line(356, 'Change lane to dodge giant crabs'),
+      line(300, 'Jump over driftwood and rocks'),
+      line(328, 'Slide under tiki gates and birds'),
+      line(356, 'Change lane to dodge coconut crabs'),
       label(400, 'PICKUPS'),
     ];
     const pickups: Array<[string, string, string]> = [
-      ['pickup_star_a', 'Star: +10 score', PICKUP_COLORS.basic],
+      ['pickup_star_a', 'Blossom: +10 score', PICKUP_COLORS.basic],
       ['pickup_shield', `${POWER_LABELS.shield}: blocks one hit`, PICKUP_COLORS.shield],
       ['pickup_magnet', `${POWER_LABELS.magnet}: pulls stars in`, PICKUP_COLORS.magnet],
       ['pickup_double', POWER_LABELS.double, PICKUP_COLORS.double],

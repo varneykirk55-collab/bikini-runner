@@ -47,10 +47,10 @@ export class Spawner {
   private sinceSky = 0;
   private rowsSincePower = 0;
   private sinceDecor = 0;
-  private nextDecor = 2;
+  private nextDecor = 1.2;
 
   constructor(private readonly scene: Phaser.Scene) {
-    for (let z = -2; z < SPAWN_Z; z += Phaser.Math.FloatBetween(1.6, 3)) this.spawnDecor(z);
+    for (let z = -2; z < SPAWN_Z; z += Phaser.Math.FloatBetween(1.15, 1.85)) this.spawnDecor(z);
   }
 
   update(dt: number, speed: number, difficulty: number, magnet: { x: number; h: number } | null, flightLeft = 0): void {
@@ -75,7 +75,7 @@ export class Spawner {
     this.sinceDecor += dz;
     if (this.sinceDecor >= this.nextDecor) {
       this.sinceDecor = 0;
-      this.nextDecor = Phaser.Math.FloatBetween(1.6, 3.2);
+      this.nextDecor = Phaser.Math.FloatBetween(1.15, 1.85);
       this.spawnDecor(SPAWN_Z + 4);
     }
 
@@ -204,9 +204,20 @@ export class Spawner {
   }
 
   private spawnDecor(z: number): void {
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const laneX = side * Phaser.Math.FloatBetween(2.25, 4.4);
-    const kind = Math.random() < 0.1 ? 'tikiTorch' : 'palm';
-    this.decor.push(new Decor(this.scene, kind, laneX, z));
+    const plants = ['palm', 'monstera', 'fern', 'hibiscus', 'palm', 'monstera'] as const;
+    for (const side of [-1, 1] as const) {
+      const kind = plants[Math.floor(Math.random() * plants.length)];
+      const laneX = side * Phaser.Math.FloatBetween(1.95, 2.5);
+      this.decor.push(new Decor(this.scene, kind, laneX, z + Phaser.Math.FloatBetween(-0.35, 0.35)));
+      if (Math.random() < 0.65) {
+        const outer = plants[Math.floor(Math.random() * plants.length)];
+        const laneX2 = side * Phaser.Math.FloatBetween(2.55, 3.7);
+        this.decor.push(new Decor(this.scene, outer, laneX2, z + Phaser.Math.FloatBetween(0.25, 1.05)));
+      }
+    }
+    if (Math.random() < 0.08) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      this.decor.push(new Decor(this.scene, 'tikiTorch', side * Phaser.Math.FloatBetween(1.9, 2.15), z));
+    }
   }
 }

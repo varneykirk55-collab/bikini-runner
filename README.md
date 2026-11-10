@@ -32,8 +32,8 @@ Requires Node 20+. `npm test` additionally uses `tsx` (a dev dependency).
 | Pause | Pause button | P / Esc |
 | Mute effects | Settings → Sound | M |
 
-Obstacles: **sandcastle, sea urchin** → jump or change lane · **limbo banner, seagull** → slide · **giant crab** →
-change lane. Pickups: stars (+10), and power-ups Life Ring (shield), Shell Magnet, ×2 Stars, Parasail (flight).
+Obstacles: **driftwood, rocks** → jump or change lane · **tiki gate, tropical bird** → slide · **coconut crab** →
+change lane. Pickups: blossoms (+10), and power-ups Life Ring (shield), Shell Magnet, ×2 Stars, Parasail (flight).
 
 ## Structure: the five concerns are separate
 

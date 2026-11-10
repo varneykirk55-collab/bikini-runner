@@ -137,16 +137,13 @@ function clouds(c: Ctx, w: number): void {
 }
 
 function sandfield(c: Ctx, w: number, h: number): void {
+  // Jungle floor under the road. Shows at the horizon seam and when a jump lifts the view.
   c.fillStyle = vGradient(c, 0, h, [
-    [0, '#ffe9b0'],
-    [1, '#f4cf8a'],
+    [0, '#123d28'],
+    [0.45, '#0c2e1c'],
+    [1, '#081810'],
   ]);
   c.fillRect(0, 0, w, h);
-  const r = seeded(3);
-  for (let i = 0; i < 160; i++) {
-    c.fillStyle = `rgba(255,255,255,${0.25 + r() * 0.4})`;
-    c.fillRect(r() * w, r() * h, 1, 1);
-  }
 }
 
 export function generateSceneryTextures(scene: Phaser.Scene): void {
@@ -159,11 +156,12 @@ export function generateSceneryTextures(scene: Phaser.Scene): void {
   makeTexture(scene, 'palmRidge', 600, 130, palmRidge);
   makeTexture(scene, 'clouds', 900, 150, clouds);
   makeTexture(scene, 'fog', 8, 140, (c, w, h) => {
+    // A thin sunset haze where the asphalt meets the painted cliffs. Kept light so the falls stay visible.
     c.fillStyle = vGradient(c, 0, h, [
-      [0, 'rgba(255,236,210,0)'],
-      [0.22, 'rgba(255,236,210,0.85)'],
-      [0.5, 'rgba(255,240,220,0.55)'],
-      [1, 'rgba(255,240,220,0)'],
+      [0, 'rgba(255,150,80,0)'],
+      [0.28, 'rgba(255,140,70,0.28)'],
+      [0.55, 'rgba(255,120,60,0.12)'],
+      [1, 'rgba(255,120,60,0)'],
     ]);
     c.fillRect(0, 0, w, h);
   });

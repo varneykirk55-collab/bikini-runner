@@ -36,8 +36,8 @@ export class Background {
     } else {
       this.buildProceduralBackdrop(scene);
     }
-    // The ground still dips when the camera rises on a jump; this fixed strip of the
-    // same sand fills the band it uncovers below the static backdrop.
+    // The ground still dips when the camera rises on a jump; this strip of jungle floor
+    // fills the band it uncovers below the painted backdrop.
     scene.add.image(0, HORIZON_Y, 'sandfield').setOrigin(0, 0).setDisplaySize(GAME_W, 140).setDepth(DEPTH.sandfield - 0.5);
 
     // Above the fog, below every track object.
