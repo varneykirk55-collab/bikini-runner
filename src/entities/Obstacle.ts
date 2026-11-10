@@ -8,6 +8,18 @@ import { TrackEntity } from './TrackEntity';
 // Re-exported so existing imports of the table keep working.
 export { OBSTACLES };
 
+/**
+ * Painted sprite scale at z = 0, so each obstacle reads as about one lane wide.
+ * Hitboxes stay in world units on the definition and are not derived from this.
+ */
+const PAINTED_SCALE: Record<ObstacleKind, number> = {
+  sandcastle: 200 / 1024,
+  urchin: 148 / 458,
+  limboPole: 196 / 778,
+  seagull: 188 / 910,
+  crab: 168 / 860,
+};
+
 /** View + per-frame behaviour for one obstacle. Hit rules live in collision/ and obstacles/defs. */
 export class Obstacle extends TrackEntity {
   readonly kind: ObstacleKind;
@@ -23,6 +35,7 @@ export class Obstacle extends TrackEntity {
     this.kind = kind;
     this.def = OBSTACLES[kind];
     this.approach = this.def.approach;
+    this.baseScale = PAINTED_SCALE[kind];
     this.t = Math.random() * 2;
   }
 

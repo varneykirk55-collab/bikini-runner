@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DEPTH, GAME_H, GAME_W, HORIZON_Y } from '../config';
+import { DEPTH, GAME_H, GAME_W, HORIZON_Y, depthForZ } from '../config';
 import { CameraRig } from '../camera/CameraRig';
 
 /**
@@ -9,17 +9,23 @@ import { CameraRig } from '../camera/CameraRig';
  */
 const ASPHALT_PATCH = 0x2c2e34;
 const EDGE = 0xf4f1ea;
-const BUSH = [0x0e3d24, 0x166b38, 0x1f8a44, 0x0a321c, 0x248a3c];
-const BUSH_HI = 0x6fbf55;
-const BLOOM = [0xd0122c, 0xff4b3a, 0xf2c14e];
 
 const ROAD = 1.52; // half-width of the asphalt, in lanes
-const BUSH_SEG = 1.15;
-/** Bushes are only drawn while they're large enough to read. The road itself runs to the horizon. */
-const BUSH_FAR = 80;
 const ROAD_FAR = 420;
 const NEAR = -2.8;
 const ASPHALT_COLOR = 0x1c1e22;
+
+/** Painted foliage strips, spaced from the foreground out to the horizon. */
+const WALL_SLICES = 22;
+const WALL_NEAR = 0.18;
+const WALL_FAR = 7.5;
+/** World length of one seamless repeat of the wall texture. */
+const WALL_TILE_Z = 8;
+
+function wallZ(i: number): number {
+  const t = i / (WALL_SLICES - 1);
+  return WALL_NEAR * Math.pow(WALL_FAR / WALL_NEAR, t);
+}
 
 /** Stable variation tied to world position so the road doesn't flicker as it scrolls. */
 function hash(a: number, b: number): number {
@@ -34,8 +40,8 @@ function hash(a: number, b: number): number {
  */
 export class TrackRenderer {
   private readonly g: Phaser.GameObjects.Graphics;
-  /** Roadside foliage, above the road and the horizon haze, still under the plants and the runner. */
-  private readonly bushes: Phaser.GameObjects.Graphics;
+  /** Left wall slices, then right wall slices. */
+  private readonly walls: Phaser.GameObjects.Image[];
   private readonly ground: Phaser.GameObjects.Image;
   private readonly fog: Phaser.GameObjects.Image;
 
@@ -46,8 +52,13 @@ export class TrackRenderer {
       .setDisplaySize(GAME_W, GAME_H - HORIZON_Y + 80)
       .setDepth(DEPTH.sandfield);
     this.g = scene.add.graphics().setDepth(DEPTH.ground);
-    this.bushes = scene.add.graphics().setDepth(DEPTH.fog + 1);
-    this.fog = scene.add.image(0, HORIZON_Y - 24, 'fog').setOrigin(0, 0).setDisplaySize(GAME_W, 150).setDepth(DEPTH.fog);
+    this.walls = [];
+    for (let i = 0; i < WALL_SLICES * 2; i++) {
+      const key = i < WALL_SLICES ? 'roadside_left' : 'roadside_right';
+      const img = scene.add.image(0, 0, key).setVisible(false);
+      this.walls.push(img);
+    }
+    this.fog = scene.add.image(0, HORIZON_Y - 24, 'fog').setOrigin(0, 0).setDisplaySize(GAME_W, 150).setAlpha(0.22).setDepth(DEPTH.sandfield - 0.2);
   }
 
   draw(proj: CameraRig, distance: number): void {
@@ -81,48 +92,43 @@ export class TrackRenderer {
       quad(side * (ROAD - 0.07), side * (ROAD - 0.02), NEAR, ROAD_FAR, EDGE);
     }
 
-    this.drawBushes(proj, distance);
+    this.drawWalls(proj, distance);
   }
 
   /**
-   * Overlapping foliage masses along both shoulders. Heights come from the world
-   * index, so the skyline of the jungle stays put as it scrolls. Plant sprites
-   * (palms, monstera, hibiscus) sit on top of this mass.
+   * Painted foliage strips along both white lines. Each slice is scaled by depth
+   * (narrow far away, wide up close) and shows the next band of the seamless texture,
+   * so the plants scroll with the run. The road-facing edge stays on the white line.
+   * Left art is not flipped: its transparent edge is the right side of the image.
    */
-  private drawBushes(proj: CameraRig, distance: number): void {
-    const g = this.bushes;
-    g.clear();
-    const rand = (k: number, salt: number) => (hash(k, salt) % 1000) / 1000;
+  private drawWalls(proj: CameraRig, distance: number): void {
+    const sample = this.walls[0];
+    if (!sample || !sample.texture || sample.texture.key === '__MISSING') return;
+    const srcH = sample.texture.getSourceImage().height || 1024;
+    const srcW = sample.texture.getSourceImage().width || 512;
 
-    const offset = distance % BUSH_SEG;
-    const base = Math.floor(distance / BUSH_SEG);
-    const count = Math.ceil((BUSH_FAR - NEAR) / BUSH_SEG) + 1;
-    for (let i = count; i >= 0; i--) {
-      const z0 = NEAR + i * BUSH_SEG - offset;
-      if (z0 > BUSH_FAR) continue;
-      const zm = z0 + BUSH_SEG * 0.5;
-      const k = base + i;
-      for (const side of [-1, 1]) {
-        // Two overlapping masses per side, sized in world units so the far shoulders stay covered.
-        const lane = side * (ROAD + 0.42 + rand(k, side + 3) * 0.7);
-        const p = proj.project(lane, zm, 0);
-        if (p.s < 0.02) continue;
-        const w = (1.05 + rand(k, 11) * 0.6) * 144 * p.s;
-        const h = (0.75 + rand(k, 19) * 0.9) * 144 * p.s;
-        g.fillStyle(BUSH[hash(k, side + 5) % BUSH.length], 1);
-        g.fillEllipse(p.x, p.y - h * 0.42, w, h, 8);
-        g.fillStyle(BUSH_HI, 0.4);
-        g.fillEllipse(p.x + side * w * 0.08, p.y - h * 0.72, w * 0.4, h * 0.28, 8);
-        if (hash(k, 23) % 4 === 0) {
-          const bloom = BLOOM[hash(k, 29) % BLOOM.length];
-          const bx = p.x - side * w * 0.15;
-          const by = p.y - h * 0.85;
-          g.fillStyle(bloom, 0.95);
-          g.fillEllipse(bx, by, Math.max(4, p.s * 16), Math.max(4, p.s * 16), 8);
-          g.fillStyle(0xffe08a, 1);
-          g.fillEllipse(bx, by, Math.max(2, p.s * 6), Math.max(2, p.s * 6), 6);
-        }
-      }
+    for (let i = 0; i < WALL_SLICES; i++) {
+      const z = wallZ(i);
+      const zCloser = i === 0 ? 0.02 : wallZ(i - 1);
+      const yNear = proj.project(0, zCloser, 0).y;
+      const yFar = proj.project(0, z, 0).y;
+      const h = Math.max(1, (yNear - yFar) * 1.35);
+      let v = ((distance + z) / WALL_TILE_Z) % 1;
+      if (v < 0) v += 1;
+      const vSpan = Math.min(Math.max(0.02, (z - zCloser) / WALL_TILE_Z), 1 - v);
+      const cropY = Math.min(srcH - 1, Math.floor(v * srcH));
+      const cropH = Math.max(1, Math.min(srcH - cropY, Math.floor(vSpan * srcH)));
+      const midY = (yNear + yFar) / 2;
+
+      const left = this.walls[i];
+      const pL = proj.project(-(ROAD - 0.05), z, 0);
+      const wL = Math.max(12, Math.abs(-24 - pL.x));
+      left.setOrigin(1, 0.5).setCrop(0, cropY, srcW, cropH).setPosition(pL.x, midY).setDisplaySize(wL, h).setDepth(depthForZ(z) - 40).setVisible(true);
+
+      const right = this.walls[WALL_SLICES + i];
+      const pR = proj.project(ROAD - 0.05, z, 0);
+      const wR = Math.max(12, Math.abs(GAME_W + 24 - pR.x));
+      right.setOrigin(0, 0.5).setCrop(0, cropY, srcW, cropH).setPosition(pR.x, midY).setDisplaySize(wR, h).setDepth(depthForZ(z) - 40).setVisible(true);
     }
   }
 }

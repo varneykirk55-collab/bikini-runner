@@ -37,11 +37,11 @@ export class MenuScene extends Phaser.Scene {
     this.background = new Background(this);
     this.track = new TrackRenderer(this);
     this.decor = [];
-    const plants = ['palm', 'monstera', 'fern', 'hibiscus'] as const;
-    for (let z = 1.2; z < 70; z += 1.6) {
+    const plants = ['palm', 'youngPalm', 'monstera', 'fern', 'hibiscus', 'banana', 'heliconia'] as const;
+    for (let z = 1.4; z < 70; z += 3.4) {
       for (const side of [-1, 1] as const) {
         const kind = plants[Math.floor(Phaser.Math.Between(0, plants.length - 1))];
-        this.decor.push(new Decor(this, kind, side * Phaser.Math.FloatBetween(1.95, 3.3), z));
+        this.decor.push(new Decor(this, kind, side * Phaser.Math.FloatBetween(1.9, 2.8), z));
       }
     }
 

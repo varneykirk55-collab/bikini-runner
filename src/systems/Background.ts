@@ -25,6 +25,8 @@ function newStreak(r = Phaser.Math.FloatBetween(20, 380)): Streak {
 export class Background {
   private clouds?: Phaser.GameObjects.TileSprite;
   private cloudScroll = 0;
+  private band?: Phaser.GameObjects.Image;
+  private treeline?: Phaser.GameObjects.Image;
   // Speed streaks: sparse radial lines whose alpha scales with run speed.
   private readonly streakGfx: Phaser.GameObjects.Graphics;
   private readonly streaks: Streak[] = [];
@@ -36,9 +38,23 @@ export class Background {
     } else {
       this.buildProceduralBackdrop(scene);
     }
-    // The ground still dips when the camera rises on a jump; this strip of jungle floor
-    // fills the band it uncovers below the painted backdrop.
-    scene.add.image(0, HORIZON_Y, 'sandfield').setOrigin(0, 0).setDisplaySize(GAME_W, 140).setDepth(DEPTH.sandfield - 0.5);
+    if (scene.textures.exists('jungle_band')) {
+      // Opaque bottom sits on the horizon; the soft top overlaps the backdrop's lower edge.
+      const bandH = GAME_W * (915 / 1920);
+      // Bottom reaches down to where the perspective walls take over, so no flat gap shows.
+      this.band = scene.add.image(GAME_W / 2, HORIZON_Y + 210, 'jungle_band').setOrigin(0.5, 1).setDisplaySize(GAME_W, bandH).setDepth(DEPTH.sandfield + 0.2);
+      if (scene.textures.exists('jungle_treeline')) {
+        const treeH = GAME_W * (586 / 1920);
+        this.treeline = scene.add
+          .image(GAME_W / 2, HORIZON_Y + 70, 'jungle_treeline')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(GAME_W, treeH)
+          .setDepth(DEPTH.sandfield + 0.4);
+      }
+    } else {
+      // The ground still dips when the camera rises on a jump; this strip fills the band it uncovers.
+      scene.add.image(0, HORIZON_Y, 'sandfield').setOrigin(0, 0).setDisplaySize(GAME_W, 140).setDepth(DEPTH.sandfield - 0.5);
+    }
 
     // Above the fog, below every track object.
     this.streakGfx = scene.add.graphics().setDepth(DEPTH.fog + 1).setBlendMode(Phaser.BlendModes.ADD);
@@ -80,6 +96,9 @@ export class Background {
       this.cloudScroll += dt * (10 + speed * 1.5);
       this.clouds.tilePositionX = this.cloudScroll;
     }
+    const horizon = HORIZON_Y + proj.lift;
+    if (this.band) this.band.y = horizon + 210;
+    if (this.treeline) this.treeline.y = horizon + 70;
     this.drawStreaks(dt, proj, speed);
   }
 

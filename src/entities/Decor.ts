@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
 import { TrackEntity } from './TrackEntity';
 
-export type DecorKind = 'palm' | 'monstera' | 'fern' | 'hibiscus' | 'tikiTorch';
+export type DecorKind = 'palm' | 'youngPalm' | 'monstera' | 'fern' | 'hibiscus' | 'banana' | 'heliconia' | 'tikiTorch';
 
+/** Painted sprites are large; these scales keep a foreground plant about a lane or two wide. */
 const SCALE: Record<DecorKind, [number, number]> = {
-  palm: [0.95, 1.45],
-  monstera: [1.15, 1.85],
-  fern: [0.85, 1.25],
-  hibiscus: [0.95, 1.45],
-  tikiTorch: [0.9, 1.15],
+  palm: [0.26, 0.4],
+  youngPalm: [0.28, 0.42],
+  monstera: [0.32, 0.5],
+  fern: [0.28, 0.42],
+  hibiscus: [0.38, 0.58],
+  banana: [0.3, 0.46],
+  heliconia: [0.28, 0.44],
+  tikiTorch: [0.24, 0.34],
 };
 
 /** Non-colliding roadside jungle. The same plants repeat for the whole run. */

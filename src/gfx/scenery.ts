@@ -137,12 +137,8 @@ function clouds(c: Ctx, w: number): void {
 }
 
 function sandfield(c: Ctx, w: number, h: number): void {
-  // Jungle floor under the road. Shows at the horizon seam and when a jump lifts the view.
-  c.fillStyle = vGradient(c, 0, h, [
-    [0, '#123d28'],
-    [0.45, '#0c2e1c'],
-    [1, '#081810'],
-  ]);
+  // Dark underlay. The painted walls and horizon band cover it; this only fills gaps.
+  c.fillStyle = '#07110d';
   c.fillRect(0, 0, w, h);
 }
 
