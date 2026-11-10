@@ -15,14 +15,14 @@ const ROAD_FAR = 420;
 const NEAR = -2.8;
 const ASPHALT_COLOR = 0x1c1e22;
 
-/** How many overlapping foliage strips each shoulder gets, and how many copies sit side by side. */
+/** How many overlapping foliage strips each shoulder gets, sampled at perspective scale. */
 const WALL_SLICES = 24;
 const WALL_NEAR = -1.6;
 const WALL_FAR = 18;
 /** World length of one seamless repeat of the wall texture. */
 const WALL_TILE_Z = 7;
-/** Fraction of the texture shown in each strip, so plants stay plants instead of smeared rows. */
-const WALL_WINDOW = 0.55;
+/** Uniform texture scale at the player; viewport width only changes the tiled area. */
+const WALL_SCALE = 0.6;
 
 function wallZ(i: number): number {
   const t = i / (WALL_SLICES - 1);
@@ -43,7 +43,7 @@ function hash(a: number, b: number): number {
 export class TrackRenderer {
   private readonly g: Phaser.GameObjects.Graphics;
   /** Left wall slices, then right wall slices. */
-  private readonly walls: Phaser.GameObjects.Image[];
+  private readonly walls: Phaser.GameObjects.TileSprite[];
   private readonly ground: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
@@ -56,7 +56,7 @@ export class TrackRenderer {
     this.walls = [];
     for (let i = 0; i < WALL_SLICES * 2; i++) {
       const key = i < WALL_SLICES ? 'roadside_left' : 'roadside_right';
-      this.walls.push(scene.add.image(0, 0, key).setVisible(false));
+      this.walls.push(scene.add.tileSprite(0, 0, 1, 1, key).setVisible(false));
     }
   }
 
@@ -95,57 +95,35 @@ export class TrackRenderer {
     this.drawWalls(proj, distance);
   }
 
-  /**
-   * Overlapping foliage strips on both shoulders. Each strip shows a tall window of
-   * the seamless texture (not a one-pixel row), so the plants don't smear into stripes.
-   * The road-facing edge of the art sits on the white line; the other edge runs past
-   * the screen. Left art is not flipped: its transparent edge is the right side.
+  /** Sample the foliage at uniform perspective scale; fill the shoulders by
+   * repeating the art rather than stretching a cropped image to the viewport.
+   * TileSprite dimensions are a sampling area, independent of texture scale.
    */
   private drawWalls(proj: CameraRig, distance: number): void {
-    const sample = this.walls[0];
-    if (!sample || sample.texture.key === '__MISSING') return;
-    const src = sample.texture.getSourceImage();
-    const srcH = src.height || 1024;
-    const srcW = src.width || 512;
-    // Skip the transparent fringe so foliage meets the white line.
-    const leftCropX = 0;
-    const leftCropW = Math.round(srcW * 0.9);
-    const rightCropX = Math.round(srcW * 0.08);
-    const rightCropW = srcW - rightCropX;
-    const windowPx = Math.max(8, Math.floor(srcH * WALL_WINDOW));
-
     for (let i = 0; i < WALL_SLICES; i++) {
       const z = wallZ(i);
       const zCloser = i === 0 ? -1.8 : wallZ(i - 1);
-      const yNear = proj.project(0, zCloser, 0).y;
-      const yFar = proj.project(0, z, 0).y;
+      const yNear = proj.project(0, zCloser).y;
+      const yFar = proj.project(0, z).y;
       const h = Math.max(12, (yNear - yFar) * 1.8);
       const midY = (yNear + yFar) / 2;
-      let v = ((distance + z) / WALL_TILE_Z) % 1;
-      if (v < 0) v += 1;
-      const cropY = Math.min(srcH - windowPx, Math.floor(v * (srcH - windowPx)));
+      const scale = WALL_SCALE * proj.scale(z);
       const depth = depthForZ(Math.max(0.2, z)) - 40;
-      // Anchor on the nearer (wider) white line and stretch to past the screen,
-      // so the shoulder is foliage rather than a staircase of short tiles.
-      const pL = proj.project(-(ROAD - 0.02), zCloser, 0);
-      const left = this.walls[i];
-      left
-        .setOrigin(1, 0.5)
-        .setCrop(leftCropX, cropY, leftCropW, windowPx)
-        .setPosition(pL.x, midY)
-        .setDisplaySize(Math.max(24, pL.x + 64), h)
-        .setDepth(depth)
-        .setVisible(true);
-
-      const pR = proj.project(ROAD - 0.02, zCloser, 0);
-      const right = this.walls[WALL_SLICES + i];
-      right
-        .setOrigin(0, 0.5)
-        .setCrop(rightCropX, cropY, rightCropW, windowPx)
-        .setPosition(pR.x, midY)
-        .setDisplaySize(Math.max(24, GAME_W + 64 - pR.x), h)
-        .setDepth(depth)
-        .setVisible(true);
+      for (const side of [-1, 1] as const) {
+        const wall = this.walls[(side < 0 ? 0 : WALL_SLICES) + i];
+        const edge = proj.project(side * (ROAD - 0.02), zCloser).x;
+        const width = Math.max(24, side < 0 ? edge + 64 : GAME_W + 64 - edge);
+        wall.setOrigin(side < 0 ? 1 : 0, 0.5)
+          .setPosition(edge, midY)
+          .setSize(Math.ceil(width), Math.ceil(h))
+          .setTileScale(scale, scale)
+          .setDepth(depth)
+          .setVisible(true);
+        // Anchor sampling to the road-facing edge, keeping the outer fill tiled.
+        const src = wall.texture.getSourceImage();
+        wall.tilePositionX = side < 0 ? src.width - width / scale : 0;
+        wall.tilePositionY = ((distance + z) / WALL_TILE_Z) * src.height;
+      }
     }
   }
 }
