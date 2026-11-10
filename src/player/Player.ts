@@ -132,11 +132,15 @@ export class Player {
 
     // The baked run already bounces. Keep the feet planted on the ground anchor.
     // Slide uses the same scale as run: every sheet was baked with one camera.
+    // Full brightness unless the post-hit blink is on. No tint and no additive blend.
+    const blinking = m.invuln > 0 && Math.floor(m.invuln * 20) % 2 === 0;
     this.sprite
       .setPosition(p.x, p.y)
       .setRotation(this.holdStanding ? 0 : (m.lane - m.x) * 0.25)
       .setScale(this.holdStanding ? RUNNER.scale : m.sliding ? RUNNER.slideScale : RUNNER.scale)
-      .setAlpha(m.invuln > 0 && Math.floor(m.invuln * 20) % 2 === 0 ? 0.35 : 1);
+      .setBlendMode(Phaser.BlendModes.NORMAL)
+      .setAlpha(blinking ? 0.35 : 1);
+    if (!blinking) this.sprite.clearTint();
 
     this.canopy.setVisible(m.flying);
     if (m.flying) {

@@ -15,16 +15,18 @@ const ROAD_FAR = 420;
 const NEAR = -2.8;
 const ASPHALT_COLOR = 0x1c1e22;
 
-/** Painted foliage strips, spaced from the foreground out to the horizon. */
-const WALL_SLICES = 22;
-const WALL_NEAR = 0.18;
-const WALL_FAR = 7.5;
+/** How many overlapping foliage strips each shoulder gets, and how many copies sit side by side. */
+const WALL_SLICES = 24;
+const WALL_NEAR = -1.6;
+const WALL_FAR = 18;
 /** World length of one seamless repeat of the wall texture. */
-const WALL_TILE_Z = 8;
+const WALL_TILE_Z = 7;
+/** Fraction of the texture shown in each strip, so plants stay plants instead of smeared rows. */
+const WALL_WINDOW = 0.55;
 
 function wallZ(i: number): number {
   const t = i / (WALL_SLICES - 1);
-  return WALL_NEAR * Math.pow(WALL_FAR / WALL_NEAR, t);
+  return WALL_NEAR + (WALL_FAR - WALL_NEAR) * t;
 }
 
 /** Stable variation tied to world position so the road doesn't flicker as it scrolls. */
@@ -43,7 +45,6 @@ export class TrackRenderer {
   /** Left wall slices, then right wall slices. */
   private readonly walls: Phaser.GameObjects.Image[];
   private readonly ground: Phaser.GameObjects.Image;
-  private readonly fog: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
     this.ground = scene.add
@@ -55,16 +56,13 @@ export class TrackRenderer {
     this.walls = [];
     for (let i = 0; i < WALL_SLICES * 2; i++) {
       const key = i < WALL_SLICES ? 'roadside_left' : 'roadside_right';
-      const img = scene.add.image(0, 0, key).setVisible(false);
-      this.walls.push(img);
+      this.walls.push(scene.add.image(0, 0, key).setVisible(false));
     }
-    this.fog = scene.add.image(0, HORIZON_Y - 24, 'fog').setOrigin(0, 0).setDisplaySize(GAME_W, 150).setAlpha(0.22).setDepth(DEPTH.sandfield - 0.2);
   }
 
   draw(proj: CameraRig, distance: number): void {
     const top = HORIZON_Y + proj.lift;
     this.ground.y = top;
-    this.fog.y = top - 30;
 
     const g = this.g;
     g.clear();
@@ -73,8 +71,10 @@ export class TrackRenderer {
       g.fillPoints([proj.project(l0, z0), proj.project(l1, z0), proj.project(l1, z1), proj.project(l0, z1)], true);
     };
 
-    // Asphalt is one surface out to the horizon. The shoulders are the jungle-floor
-    // gradient (sandfield) plus the bushes and plant sprites, so they aren't a flat fill.
+    // Jungle green under the foliage, so a missed strip is leaves, not the black underlay.
+    for (const side of [-1, 1] as const) {
+      quad(side * (ROAD - 0.04), side * 8, NEAR, 90, 0x12341c);
+    }
     quad(-ROAD, ROAD, NEAR, ROAD_FAR, ASPHALT_COLOR);
 
     // A few gravel specks scroll with the run. Small enough that they don't read as stripes.
@@ -96,39 +96,56 @@ export class TrackRenderer {
   }
 
   /**
-   * Painted foliage strips along both white lines. Each slice is scaled by depth
-   * (narrow far away, wide up close) and shows the next band of the seamless texture,
-   * so the plants scroll with the run. The road-facing edge stays on the white line.
-   * Left art is not flipped: its transparent edge is the right side of the image.
+   * Overlapping foliage strips on both shoulders. Each strip shows a tall window of
+   * the seamless texture (not a one-pixel row), so the plants don't smear into stripes.
+   * The road-facing edge of the art sits on the white line; the other edge runs past
+   * the screen. Left art is not flipped: its transparent edge is the right side.
    */
   private drawWalls(proj: CameraRig, distance: number): void {
     const sample = this.walls[0];
-    if (!sample || !sample.texture || sample.texture.key === '__MISSING') return;
-    const srcH = sample.texture.getSourceImage().height || 1024;
-    const srcW = sample.texture.getSourceImage().width || 512;
+    if (!sample || sample.texture.key === '__MISSING') return;
+    const src = sample.texture.getSourceImage();
+    const srcH = src.height || 1024;
+    const srcW = src.width || 512;
+    // Skip the transparent fringe so foliage meets the white line.
+    const leftCropX = 0;
+    const leftCropW = Math.round(srcW * 0.9);
+    const rightCropX = Math.round(srcW * 0.08);
+    const rightCropW = srcW - rightCropX;
+    const windowPx = Math.max(8, Math.floor(srcH * WALL_WINDOW));
 
     for (let i = 0; i < WALL_SLICES; i++) {
       const z = wallZ(i);
-      const zCloser = i === 0 ? 0.02 : wallZ(i - 1);
+      const zCloser = i === 0 ? -1.8 : wallZ(i - 1);
       const yNear = proj.project(0, zCloser, 0).y;
       const yFar = proj.project(0, z, 0).y;
-      const h = Math.max(1, (yNear - yFar) * 1.35);
+      const h = Math.max(12, (yNear - yFar) * 1.8);
+      const midY = (yNear + yFar) / 2;
       let v = ((distance + z) / WALL_TILE_Z) % 1;
       if (v < 0) v += 1;
-      const vSpan = Math.min(Math.max(0.02, (z - zCloser) / WALL_TILE_Z), 1 - v);
-      const cropY = Math.min(srcH - 1, Math.floor(v * srcH));
-      const cropH = Math.max(1, Math.min(srcH - cropY, Math.floor(vSpan * srcH)));
-      const midY = (yNear + yFar) / 2;
-
+      const cropY = Math.min(srcH - windowPx, Math.floor(v * (srcH - windowPx)));
+      const depth = depthForZ(Math.max(0.2, z)) - 40;
+      // Anchor on the nearer (wider) white line and stretch to past the screen,
+      // so the shoulder is foliage rather than a staircase of short tiles.
+      const pL = proj.project(-(ROAD - 0.02), zCloser, 0);
       const left = this.walls[i];
-      const pL = proj.project(-(ROAD - 0.05), z, 0);
-      const wL = Math.max(12, Math.abs(-24 - pL.x));
-      left.setOrigin(1, 0.5).setCrop(0, cropY, srcW, cropH).setPosition(pL.x, midY).setDisplaySize(wL, h).setDepth(depthForZ(z) - 40).setVisible(true);
+      left
+        .setOrigin(1, 0.5)
+        .setCrop(leftCropX, cropY, leftCropW, windowPx)
+        .setPosition(pL.x, midY)
+        .setDisplaySize(Math.max(24, pL.x + 64), h)
+        .setDepth(depth)
+        .setVisible(true);
 
+      const pR = proj.project(ROAD - 0.02, zCloser, 0);
       const right = this.walls[WALL_SLICES + i];
-      const pR = proj.project(ROAD - 0.05, z, 0);
-      const wR = Math.max(12, Math.abs(GAME_W + 24 - pR.x));
-      right.setOrigin(0, 0.5).setCrop(0, cropY, srcW, cropH).setPosition(pR.x, midY).setDisplaySize(wR, h).setDepth(depthForZ(z) - 40).setVisible(true);
+      right
+        .setOrigin(0, 0.5)
+        .setCrop(rightCropX, cropY, rightCropW, windowPx)
+        .setPosition(pR.x, midY)
+        .setDisplaySize(Math.max(24, GAME_W + 64 - pR.x), h)
+        .setDepth(depth)
+        .setVisible(true);
     }
   }
 }

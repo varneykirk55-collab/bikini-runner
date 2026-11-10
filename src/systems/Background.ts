@@ -41,15 +41,22 @@ export class Background {
     if (scene.textures.exists('jungle_band')) {
       // Opaque bottom sits on the horizon; the soft top overlaps the backdrop's lower edge.
       const bandH = GAME_W * (915 / 1920);
-      // Bottom reaches down to where the perspective walls take over, so no flat gap shows.
-      this.band = scene.add.image(GAME_W / 2, HORIZON_Y + 210, 'jungle_band').setOrigin(0.5, 1).setDisplaySize(GAME_W, bandH).setDepth(DEPTH.sandfield + 0.2);
+      // Bottom sits just below the horizon so the opaque jungle covers the backdrop's
+      // tan lower edge, and the soft top still overlaps the cliffs.
+      this.band = scene.add.image(GAME_W / 2, HORIZON_Y + 190, 'jungle_band').setOrigin(0.5, 1).setDisplaySize(GAME_W, bandH).setDepth(DEPTH.sandfield + 0.2);
       if (scene.textures.exists('jungle_treeline')) {
         const treeH = GAME_W * (586 / 1920);
         this.treeline = scene.add
-          .image(GAME_W / 2, HORIZON_Y + 70, 'jungle_treeline')
+          .image(GAME_W / 2, HORIZON_Y + 8, 'jungle_treeline')
           .setOrigin(0.5, 1)
           .setDisplaySize(GAME_W, treeH)
           .setDepth(DEPTH.sandfield + 0.4);
+        // The painted treeline ends in a tan sand fringe. Crop it off so it can't
+        // draw a beige line where the midground meets the road.
+        const treeSrc = this.treeline.texture.getSourceImage();
+        const treeSrcH = treeSrc.height || 586;
+        const treeSrcW = treeSrc.width || 1920;
+        this.treeline.setCrop(0, 0, treeSrcW, Math.max(1, treeSrcH - 72));
       }
     } else {
       // The ground still dips when the camera rises on a jump; this strip fills the band it uncovers.
@@ -97,8 +104,8 @@ export class Background {
       this.clouds.tilePositionX = this.cloudScroll;
     }
     const horizon = HORIZON_Y + proj.lift;
-    if (this.band) this.band.y = horizon + 210;
-    if (this.treeline) this.treeline.y = horizon + 70;
+    if (this.band) this.band.y = horizon + 190;
+    if (this.treeline) this.treeline.y = horizon + 8;
     this.drawStreaks(dt, proj, speed);
   }
 
